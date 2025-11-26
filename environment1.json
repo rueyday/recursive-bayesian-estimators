@@ -1,134 +1,85 @@
 {
   "robots": [
     {
-        "name": "pr2",
-        "path": "pr2/pr2.urdf",
-        "conf": {
-            "torso_lift_joint": [0.0],
-            "head_pan_joint": [0.0],
-            "head_tilt_joint": [0.0]
-        },
-        "point": { "x": -3.5, "y": -3.5, "z": 0 },
-        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }
-        }
+      "name": "pr2",
+      "path": "pr2/pr2.urdf",
+      "conf": {
+        "torso_lift_joint": [0.0],
+        "head_pan_joint": [0.0],
+        "head_tilt_joint": [0.0]
+      },
+      "point": { "x": -5, "y": -5, "z": 0 },
+      "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }
+    }
   ],
-
   "bodies": [
     {
       "name": "outer_walls",
       "point": { "x": 0, "y": 0, "z": 0 },
       "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-      "aabb": { "center": [0, 0, 0.15], "extents": [5.0, 5.0, 0.15] },
+      "aabb": { "center": [0, 0, 0.2], "extents": [5.05, 5.05, 0.2] },
       "links": [
         [
-          {
-            "type": "box",
-            "color": { "r": 0.8, "g": 0.7, "b": 0.55, "a": 1 },
-            "extents": [5.0, 0.1, 0.3],
-            "point": { "x": 0, "y": 5.0, "z": 0 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          },
-          {
-            "type": "box",
-            "color": { "r": 0.8, "g": 0.7, "b": 0.55, "a": 1 },
-            "extents": [5.0, 0.1, 0.3],
-            "point": { "x": 0, "y": -5.0, "z": 0 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          },
-          {
-            "type": "box",
-            "color": { "r": 0.8, "g": 0.7, "b": 0.55, "a": 1 },
-            "extents": [0.1, 5.0, 0.3],
-            "point": { "x": 5.0, "y": 0, "z": 0 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          },
-          {
-            "type": "box",
-            "color": { "r": 0.8, "g": 0.7, "b": 0.55, "a": 1 },
-            "extents": [0.1, 5.0, 0.3],
-            "point": { "x": -5.0, "y": 0, "z": 0 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          }
+          { "type": "box", "color": { "r": 0.7, "g": 0.7, "b": 0.7, "a": 1 }, "extents": [7.0, 0.1, 0.4], "point": { "x": 0, "y": 7, "z": 0.2 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "specular": [0, 0, 0] },
+          { "type": "box", "color": { "r": 0.7, "g": 0.7, "b": 0.7, "a": 1 }, "extents": [7.0, 0.1, 0.4], "point": { "x": 0, "y": -7, "z": 0.2 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "specular": [0, 0, 0] },
+          { "type": "box", "color": { "r": 0.7, "g": 0.7, "b": 0.7, "a": 1 }, "extents": [0.1, 7.0, 0.4], "point": { "x": 7, "y": 0, "z": 0.2 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "specular": [0, 0, 0] },
+          { "type": "box", "color": { "r": 0.7, "g": 0.7, "b": 0.7, "a": 1 }, "extents": [0.1, 7.0, 0.4], "point": { "x": -7, "y": 0, "z": 0.2 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "specular": [0, 0, 0] }
         ]
       ]
     },
-
     {
-      "name": "corridor_block",
-      "point": { "x": -1.5, "y": 0, "z": 0 },
+      "name": "central_barrier",
+      "point": { "x": 0, "y": 0, "z": 0 },
       "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-      "aabb": { "center": [-1.5, 0, 0.75], "extents": [0.3, 3.0, 0.75] },
+      "aabb": { "center": [0, 0, 0.75], "extents": [3.0, 0.2, 0.75] },
       "links": [
         [
-          {
-            "type": "box",
-            "extents": [0.3, 3.0, 1.5],
-            "point": { "x": -1.5, "y": 0, "z": 0.75 },
-            "color": { "r": 0.7, "g": 0.3, "b": 0.3, "a": 1 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          }
+          { "type": "box", "extents": [6.0, 0.4, 1.5], "point": { "x": 0, "y": 0, "z": 0.75 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "color": { "r": 0.6, "g": 0.2, "b": 0.2, "a": 1 }, "specular": [0, 0, 0] }
         ]
       ]
     },
-
     {
-      "name": "maze_wall_1",
-      "point": { "x": 2.5, "y": -1.0, "z": 0 },
+      "name": "pillar_1",
+      "point": { "x": 2.0, "y": 2.0, "z": 0 },
       "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-      "aabb": { "center": [2.5, -1.0, 0.75], "extents": [1.5, 0.2, 0.75] },
+      "aabb": { "center": [0, 0, 0.75], "extents": [0.25, 0.25, 0.75] },
       "links": [
         [
-          {
-            "type": "box",
-            "extents": [1.5, 0.2, 1.5],
-            "point": { "x": 2.5, "y": -1.0, "z": 0.75 },
-            "color": { "r": 0.6, "g": 0.4, "b": 0.6, "a": 1 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          }
+          { "type": "box", "extents": [0.5, 0.5, 1.5], "point": { "x": 3, "y": 3, "z": 0.75 }, "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }, "color": {"r":1,"g":0.8,"b":0.2,"a":1}, "specular":[0,0,0]}
         ]
       ]
     },
-
     {
-      "name": "maze_wall_2",
-      "point": { "x": 1.0, "y": 2.0, "z": 0 },
+      "name": "pillar_2",
+      "point": { "x": -2.5, "y": 3.0, "z": 0 },
       "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-      "aabb": { "center": [1.0, 2.0, 0.75], "extents": [0.2, 2.0, 0.75] },
+      "aabb": { "center": [0, 0, 0.75], "extents": [0.2, 0.4, 0.75] },
       "links": [
         [
-          {
-            "type": "box",
-            "extents": [0.2, 2.0, 1.5],
-            "point": { "x": 1.0, "y": 2.0, "z": 0.75 },
-            "color": { "r": 0.4, "g": 0.6, "b": 0.4, "a": 1 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          }
+          { "type": "box", "extents": [0.4, 0.8, 1.5], "point": { "x": 1, "y": 1, "z": 0.75 }, "quat": {"w":1,"x":0,"y":0,"z":0}, "color":{"r":0.2,"g":0.5,"b":1,"a":1}, "specular":[0,0,0]}
         ]
       ]
     },
-
     {
-      "name": "pillar_obstacle",
-      "point": { "x": -3.0, "y": 2.5, "z": 0 },
-      "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-      "aabb": { "center": [-3.0, 2.5, 0.75], "extents": [0.3, 0.3, 0.75] },
+      "name": "angled_blocker",
+      "point": { "x": 3.0, "y": -1.5, "z": 0 },
+      "quat": { "w": 0.7071, "x": 0, "y": 0, "z": 0.7071 },
+      "aabb": { "center": [0, 0, 0.75], "extents": [0.5, 0.15, 0.75] },
       "links": [
         [
-          {
-            "type": "box",
-            "extents": [0.3, 0.3, 1.5],
-            "point": { "x": -3.0, "y": 2.5, "z": 0.75 },
-            "color": { "r": 0.9, "g": 0.1, "b": 0.1, "a": 1 },
-            "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-            "specular": [0, 0, 0]
-          }
+          { "type":"box", "extents":[1.0, 0.3, 1.5], "point":{"x":-1,"y":-1,"z":0.75}, "quat":{"w":1,"x":0,"y":0,"z":0}, "color":{"r":0.3,"g":0.3,"b":0.3,"a":1}, "specular":[0,0,0]}
+        ]
+      ]
+    },
+    {
+      "name": "tunnel_wall_pair",
+      "point": { "x": -1.0, "y": -3.0, "z": 0 },
+      "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+      "aabb": { "center": [0, 0, 0.75], "extents": [1.2, 0.6, 0.75] },
+      "links": [
+        [
+          { "type":"box","extents":[2.4,0.2,1.5],"point":{"x":-3,"y":0.3,"z":0.75},"quat":{"w":1,"x":0,"y":0,"z":0},"color":{"r":0.5,"g":0.5,"b":0.5,"a":1},"specular":[0,0,0]},
+          { "type":"box","extents":[2.4,0.2,1.5],"point":{"x":-3,"y":-0.3,"z":0.75},"quat":{"w":1,"x":0,"y":0,"z":0},"color":{"r":0.5,"g":0.5,"b":0.5,"a":1},"specular":[0,0,0]}
         ]
       ]
     }
