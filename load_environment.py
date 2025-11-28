@@ -11,7 +11,8 @@ def main(screenshot=False):
     # initialize PyBullet
     connect(use_gui=True)
     # load robot and obstacle resources
-    robots, obstacles = load_env('environment1.json')
+    # robots, obstacles = load_env('environment1.json')
+    robots, obstacles = load_env('8path_env.json')
 
     wait_if_gui('Environment loaded. Press to continue.')
     disconnect() 
