@@ -8,8 +8,8 @@
           "head_pan_joint": [0.0],
           "head_tilt_joint": [0.0]
         },
-        "point": { "x": -5, "y": -5, "z": 0 },
-        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 }
+        "point": { "x": -4, "y": 5, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 1 }
       }
     ],
   
@@ -24,8 +24,8 @@
           [
             {
               "type": "box",
-              "extents": [0.2, 4.0, 1.0],
-              "point": { "x": -2.2, "y": 0.0, "z": 0.5 },
+              "extents": [0.2, 10.0, 1.0],
+              "point": { "x": -5.0, "y": 0.0, "z": 0.5 },
               "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
               "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
               "specular": [0, 0, 0]
@@ -33,26 +33,7 @@
           ]
         ]
       },
-  
-      {
-        "name": "left_inner_vertical",
-        "point": { "x": 0, "y": 0, "z": 0 },
-        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-        "aabb": { "center": [-0.8, 0.0, 0.5], "extents": [0.1, 1.0, 0.5] },
-        "links": [
-          [
-            {
-              "type": "box",
-              "extents": [0.2, 2.0, 1.0],
-              "point": { "x": -0.8, "y": 0.0, "z": 0.5 },
-              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
-              "specular": [0, 0, 0]
-            }
-          ]
-        ]
-      },
-  
+      
       {
         "name": "right_outer_vertical",
         "point": { "x": 0, "y": 0, "z": 0 },
@@ -62,8 +43,8 @@
           [
             {
               "type": "box",
-              "extents": [0.2, 4.0, 1.0],
-              "point": { "x": 2.2, "y": 0.0, "z": 0.5 },
+              "extents": [0.2, 10.0, 1.0],
+              "point": { "x": 5.0, "y": 0.0, "z": 0.5 },
               "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
               "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
               "specular": [0, 0, 0]
@@ -71,26 +52,7 @@
           ]
         ]
       },
-  
-      {
-        "name": "right_inner_vertical",
-        "point": { "x": 0, "y": 0, "z": 0 },
-        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-        "aabb": { "center": [0.8, 0.0, 0.5], "extents": [0.1, 1.0, 0.5] },
-        "links": [
-          [
-            {
-              "type": "box",
-              "extents": [0.2, 2.0, 1.0],
-              "point": { "x": 0.8, "y": 0.0, "z": 0.5 },
-              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
-              "specular": [0, 0, 0]
-            }
-          ]
-        ]
-      },
-  
+      
       {
         "name": "top_outer_horizontal",
         "point": { "x": 0, "y": 0, "z": 0 },
@@ -100,27 +62,8 @@
           [
             {
               "type": "box",
-              "extents": [4.0, 0.2, 1.0],
-              "point": { "x": 0.0, "y": 2.2, "z": 0.5 },
-              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
-              "specular": [0, 0, 0]
-            }
-          ]
-        ]
-      },
-  
-      {
-        "name": "top_inner_horizontal",
-        "point": { "x": 0, "y": 0, "z": 0 },
-        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
-        "aabb": { "center": [0.0, 0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
-        "links": [
-          [
-            {
-              "type": "box",
-              "extents": [2.0, 0.2, 1.0],
-              "point": { "x": 0.0, "y": 0.8, "z": 0.5 },
+              "extents": [5.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": 10.0, "z": 0.5 },
               "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
               "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
               "specular": [0, 0, 0]
@@ -138,8 +81,8 @@
           [
             {
               "type": "box",
-              "extents": [4.0, 0.2, 1.0],
-              "point": { "x": 0.0, "y": -2.2, "z": 0.5 },
+              "extents": [5.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": -10.0, "z": 0.5 },
               "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
               "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
               "specular": [0, 0, 0]
@@ -149,7 +92,83 @@
       },
   
       {
-        "name": "bottom_inner_horizontal",
+        "name": "left_inner_tunnel",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [-0.8, 0.0, 0.5], "extents": [0.1, 1.0, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 1.0, 1.0],
+              "point": { "x": -0.8, "y": 0.0, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+  
+      {
+        "name": "right_inner_tunnel",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.8, 0.0, 0.5], "extents": [0.1, 1.0, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 1.0, 1.0],
+              "point": { "x": 0.8, "y": 0.0, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+  
+      {
+        "name": "top_right_inner_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, 0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [2.0, 0.2, 1.0],
+              "point": { "x": 3.0, "y": 0.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "top_left_inner_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, 0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [2.0, 0.2, 1.0],
+              "point": { "x": -3.0, "y": 0.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+  
+      {
+        "name": "bottom_right_inner_horizontal",
         "point": { "x": 0, "y": 0, "z": 0 },
         "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
         "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
@@ -158,7 +177,177 @@
             {
               "type": "box",
               "extents": [2.0, 0.2, 1.0],
-              "point": { "x": 0.0, "y": -0.8, "z": 0.5 },
+              "point": { "x": 3.0, "y": -0.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+  
+      {
+        "name": "bottom_left_inner_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [2.0, 0.2, 1.0],
+              "point": { "x": -3.0, "y": -0.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "bottom_center_top_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [3.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": 3.3, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "bottom_center_bottom_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [3.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": 8.3, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "bottom_center_left_vertical",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 2.5, 1.0],
+              "point": { "x": 3, "y": 5.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "bottom_center_right_vertical",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 2.5, 1.0],
+              "point": { "x": -3, "y": 5.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+      {
+        "name": "top_center_top_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [3.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": -3.3, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "top_center_bottom_horizontal",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [3.0, 0.2, 1.0],
+              "point": { "x": 0.0, "y": -8.3, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "top_center_left_vertical",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 2.5, 1.0],
+              "point": { "x": 3, "y": -5.8, "z": 0.5 },
+              "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
+              "specular": [0, 0, 0]
+            }
+          ]
+        ]
+      },
+
+      {
+        "name": "bottom_center_right_vertical",
+        "point": { "x": 0, "y": 0, "z": 0 },
+        "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
+        "aabb": { "center": [0.0, -0.8, 0.5], "extents": [1.0, 0.1, 0.5] },
+        "links": [
+          [
+            {
+              "type": "box",
+              "extents": [0.2, 2.5, 1.0],
+              "point": { "x": -3, "y": -5.8, "z": 0.5 },
               "quat": { "w": 1, "x": 0, "y": 0, "z": 0 },
               "color": { "r": 0.8, "g": 0.8, "b": 0.8, "a": 1.0 },
               "specular": [0, 0, 0]
@@ -166,7 +355,6 @@
           ]
         ]
       }
-  
     ]
   }
   
