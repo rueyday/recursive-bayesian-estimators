@@ -1,6 +1,14 @@
+import os
+import sys
+
+# Force display for Windows
+if sys.platform == 'win32':
+    os.environ['DISPLAY'] = ':0'
+
 import numpy as np
 from utils import get_collision_fn_PR2, load_env, execute_trajectory, draw_sphere_marker
-from pybullet_tools.utils import connect, disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
+import pybullet_tools.utils
+from pybullet_tools.utils import disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
 from pybullet_tools.pr2_utils import PR2_GROUPS
 import pybullet as p
 import time
@@ -131,7 +139,21 @@ def visualize_lidar_pointcloud(ranges, angles, robot, link_name):
 
 
 def main(screenshot=False):
-    connect(use_gui=True)
+    print("Connecting to PyBullet GUI...")
+    
+    # Manual connection that properly registers with CLIENTS
+    client = p.connect(p.GUI)
+    print(f"Connected! Physics client ID: {client}")
+    
+    # Manually register the client in the CLIENTS dictionary
+    # This is what the connect() utility normally does
+    # CLIENTS[client_id] should store the rendering state (True/False)
+    if not hasattr(pybullet_tools.utils, 'CLIENTS'):
+        pybullet_tools.utils.CLIENTS = {}
+    
+    pybullet_tools.utils.CLIENTS[client] = True  # True means rendering is enabled
+    
+    print(f"Registered client. CLIENTS dictionary: {pybullet_tools.utils.CLIENTS}")
     
     robots, obstacles = load_env('8path_env.json')
     
