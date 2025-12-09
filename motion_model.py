@@ -47,24 +47,26 @@ class RobotModel:
 
     # -------------------------
     # SENSOR MODEL (ABSTRACT)
-    # -------------------------
-    def sensor_update(self, lidar_ranges):
+    # ------------------------
+        
+    def propagate_state(self, state, v, omega, dt):
         """
-        Sensor model placeholder.
-        lidar_ranges: array from your PyBullet lidar scan.
-
-        For EKF:
-            You will compute an expected scan and a Jacobian here.
-
-        For Particle Filter:
-            You will compute a likelihood p(z | x).
-
-        For now, we simply return a noisy measurement placeholder.
+        Stateless motion model.
+        Used by particle filter and EKF prediction step.
         """
-        noisy_measurement = np.array(lidar_ranges) + np.random.normal(
-            0, self.sensor_noise_std, size=len(lidar_ranges)
-        )
-        return noisy_measurement
+        x, y, theta = state["x"], state["y"], state["theta"]
+
+        v += np.random.normal(0, self.v_noise_std)
+        omega += np.random.normal(0, self.omega_noise_std)
+
+        x += v * np.cos(theta) * dt
+        y += v * np.sin(theta) * dt
+        theta += omega * dt
+
+        theta = (theta + np.pi) % (2 * np.pi) - np.pi
+
+        return {"x": x, "y": y, "theta": theta}
+
 
     # -------------------------
     # STATE ACCESS HELPERS
