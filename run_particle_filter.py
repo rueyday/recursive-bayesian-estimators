@@ -12,14 +12,15 @@ import numpy as np
 from utils import get_collision_fn_PR2, load_env, execute_trajectory, draw_sphere_marker
 import pybullet_tools.utils
 from pybullet_tools.utils import disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
-from pybullet_tools.pr2_utils import PR2_GROUPS, get_base_pose, set_base_pose
+from pybullet_tools.pr2_utils import PR2_GROUPS, get_base_pose
 import pybullet as p
 import time
 
 waypoints = [
-    (1.0, 0.0),
-    (2.0, 1.0),
-    (3.0, 1.0),
+    (2.0, 0.0),
+    (2.0, 2.0),
+    (0.0, 2.0),
+    (0.0, 0.0)
 ]
 
 def compute_control(est, goal):
@@ -32,6 +33,11 @@ def compute_control(est, goal):
 
     v = 0.5
     omega = 2.0 * theta_err
+
+    omega = np.clip(omega, -2.0, 2.0)
+    dist = np.hypot(dx, dy)
+    v = min(0.5, dist)
+
     return v, omega
 
 
@@ -77,7 +83,7 @@ def main(screenshot=False):
     )
 
     dt = 0.1
-
+    truth = {"x": -4.0, "y": 5.0, "theta": np.pi/2}
     
     wait_if_gui('Environment loaded. Press to start.')
     
@@ -86,17 +92,20 @@ def main(screenshot=False):
         while True:
 
             # -------------------------
-            # 1. APPLY CONTROL (truth)
+            # 1. APPLY CONTROL (TRUTH)
             # -------------------------
-            # Move the PR2 base (simplified)
-            base_x, base_y, base_theta = get_base_pose(pr2)
-            v, omega = compute_control(pf.estimate(), waypoints[0])
+            v, omega = compute_control(truth, waypoints[0])
 
-            base_x += v * np.cos(base_theta) * dt
-            base_y += v * np.sin(base_theta) * dt
-            base_theta += omega * dt
+            truth["x"] += v * np.cos(truth["theta"]) * dt
+            truth["y"] += v * np.sin(truth["theta"]) * dt
+            truth["theta"] += omega * dt
+            truth["theta"] = (truth["theta"] + np.pi) % (2*np.pi) - np.pi
+            p.resetBasePositionAndOrientation(
+                pr2,
+                (truth["x"], truth["y"], 0.0),
+                p.getQuaternionFromEuler((0, 0, truth["theta"]))
+            )
 
-            set_base_pose(pr2, base_x, base_y, base_theta)
 
             # -------------------------
             # 2. PARTICLE PREDICTION
@@ -125,6 +134,10 @@ def main(screenshot=False):
             draw_sphere_marker((est['x'], est['y'], 0.1), radius=0.1, color=(0,1,0))
 
             visualize_lidar_pointcloud(ranges, angles, pr2, 'head_tilt_link')
+
+            print(f"TRUTH: {truth}")
+            print(f"EST: {pf.estimate()}")
+
 
             time.sleep(dt)
 

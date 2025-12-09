@@ -48,6 +48,37 @@ class RobotModel:
     # -------------------------
     # SENSOR MODEL (ABSTRACT)
     # ------------------------
+
+    def sensor_update(self, lidar_ranges):
+        """
+        Particle Filter sensor likelihood.
+        Uses simple statistics of the LiDAR scan.
+        Returns p(z | x).
+        """
+
+        # Ignore max-range readings
+        valid = lidar_ranges[lidar_ranges < 10.0]
+
+        if len(valid) == 0:
+            # No obstacles detected → weak information
+            return 1e-3
+
+        # Summary statistics
+        z_min = valid.min()
+        z_mean = valid.mean()
+
+        # Expected values (tunable!)
+        expected_min = 1.0    # meters
+        expected_mean = 3.0   # meters
+
+        # Gaussian likelihoods
+        p_min = np.exp(-0.5 * ((z_min - expected_min) / self.sensor_noise_std) ** 2)
+        p_mean = np.exp(-0.5 * ((z_mean - expected_mean) / self.sensor_noise_std) ** 2)
+
+        likelihood = p_min * p_mean
+
+        return likelihood
+
         
     def propagate_state(self, state, v, omega, dt):
         """
