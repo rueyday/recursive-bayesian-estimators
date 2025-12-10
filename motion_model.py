@@ -49,36 +49,61 @@ class RobotModel:
     # SENSOR MODEL (ABSTRACT)
     # ------------------------
 
-    def sensor_update(self, lidar_ranges):
+    def expected_lidar_from_map(px, py, yaw, distance_field, max_range=10.0, num_rays=360, resolution=0.05, grid_size=200):
+        width = grid_size
+        height = grid_size
+        angles = np.linspace(0, 2*np.pi, num_rays, endpoint=False)
+        ranges = np.zeros(num_rays)
+
+        for i, a in enumerate(angles):
+            angle = yaw + a
+            
+            # March along the ray at coarse steps (fast)
+            for d in np.linspace(0, max_range, 200):
+                wx = px + d * np.cos(angle)
+                wy = py + d * np.sin(angle)
+
+                gx = int(wx / resolution)
+                gy = int(wy / resolution)
+
+                # Out of bounds
+                if gx < 0 or gy < 0 or gx >= width or gy >= height:
+                    break
+
+                if distance_field[gy, gx] < 0.01:  # close to wall
+                    ranges[i] = d
+                    break
+            else:
+                ranges[i] = max_range
+
+        return ranges
+    
+    def scan_likelihood(real_scan, exp_scan, sigma=0.1):
+        diff = real_scan - exp_scan
+        return np.exp(-(diff*diff).sum() / (2*sigma*sigma))
+
+    
+    def sensor_update(self, lidar_ranges, distance_field, max_range=10.0, num_rays=360, resolution=0.5, grid_size=20):
         """
         Particle Filter sensor likelihood.
         Uses simple statistics of the LiDAR scan.
         Returns p(z | x).
         """
 
-        # Ignore max-range readings
-        valid = lidar_ranges[lidar_ranges < 10.0]
+        px = self.state["x"]
+        py = self.state["y"]
+        yaw = self.state["theta"]
 
-        if len(valid) == 0:
-            # No obstacles detected → weak information
-            return 1e-3
+        exp_ranges = RobotModel.expected_lidar_from_map(
+            px, py, yaw, distance_field,
+            max_range=max_range,
+            num_rays=num_rays,
+            resolution=resolution,
+            grid_size=grid_size
+        )
 
-        # Summary statistics
-        z_min = valid.min()
-        z_mean = valid.mean()
-
-        # Expected values (tunable!)
-        expected_min = 1.0    # meters
-        expected_mean = 3.0   # meters
-
-        # Gaussian likelihoods
-        p_min = np.exp(-0.5 * ((z_min - expected_min) / self.sensor_noise_std) ** 2)
-        p_mean = np.exp(-0.5 * ((z_mean - expected_mean) / self.sensor_noise_std) ** 2)
-
-        likelihood = p_min * p_mean
-
+        likelihood = RobotModel.scan_likelihood(lidar_ranges, exp_ranges, sigma=self.sensor_noise_std)
         return likelihood
-
         
     def propagate_state(self, state, v, omega, dt):
         """

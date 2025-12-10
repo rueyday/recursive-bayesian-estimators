@@ -1,153 +1,106 @@
-from motion_model import RobotModel
-from particle_model import ParticleFilter
-from lidar_utils import create_lidar_scan, visualize_lidar, visualize_lidar_pointcloud
 import os
 import sys
+import numpy as np
+import pybullet as p
+import time
+from math import cos, sin
+
+from lidar_utils import create_lidar_scan, visualize_lidar
+from particle_model import ParticleFilter, build_occupancy_grid
+from utils import load_env
+from pybullet_tools.utils import set_base_values, get_link_pose, link_from_name
 
 # Force display for Windows
 if sys.platform == 'win32':
     os.environ['DISPLAY'] = ':0'
 
-import numpy as np
-from utils import get_collision_fn_PR2, load_env, execute_trajectory, draw_sphere_marker
-import pybullet_tools.utils
-from pybullet_tools.utils import disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
-from pybullet_tools.pr2_utils import PR2_GROUPS, get_base_pose
-import pybullet as p
-import time
 
-waypoints = [
-    (2.0, 0.0),
-    (2.0, 2.0),
-    (0.0, 2.0),
-    (0.0, 0.0)
-]
-
-def compute_control(est, goal):
-    dx = goal[0] - est["x"]
-    dy = goal[1] - est["y"]
-
-    goal_theta = np.arctan2(dy, dx)
-    theta_err = goal_theta - est["theta"]
-    theta_err = (theta_err + np.pi) % (2*np.pi) - np.pi
-
-    v = 0.5
-    omega = 2.0 * theta_err
-
-    omega = np.clip(omega, -2.0, 2.0)
-    dist = np.hypot(dx, dy)
-    v = min(0.5, dist)
-
-    return v, omega
-
-
-def main(screenshot=False):
+def main():
     print("Connecting to PyBullet GUI...")
-    
-    # Manual connection that properly registers with CLIENTS
     client = p.connect(p.GUI)
-    print(f"Connected! Physics client ID: {client}")
-    
-    # Manually register the client in the CLIENTS dictionary
-    # This is what the connect() utility normally does
-    # CLIENTS[client_id] should store the rendering state (True/False)
-    if not hasattr(pybullet_tools.utils, 'CLIENTS'):
-        pybullet_tools.utils.CLIENTS = {}
-    
-    pybullet_tools.utils.CLIENTS[client] = True  # True means rendering is enabled
-    
-    print(f"Registered client. CLIENTS dictionary: {pybullet_tools.utils.CLIENTS}")
-    
-    robots, obstacles = load_env('8path_env.json')
-    
-    print("Available robots:", list(robots.keys()))
-    
-    if 'pr2' in robots:
-        pr2 = robots['pr2']
-    elif 'robot' in robots:
-        pr2 = robots['robot']
-    else:
-        pr2 = list(robots.values())[0]
-    
-    print(f"Using robot ID: {pr2}")
+    if not hasattr(sys.modules["pybullet_tools.utils"], "CLIENTS"):
+        sys.modules["pybullet_tools.utils"].CLIENTS = {}
+    sys.modules["pybullet_tools.utils"].CLIENTS[client] = True
 
-    robot_model = RobotModel()
+    # Load environment
+    robots, obstacles = load_env("8path_env.json")
+    pr2 = robots.get("pr2", list(robots.values())[0])
+    link_name = "head_tilt_link"
 
-    # Initial guess (rough, not perfect)
-    init_state = {"x": 0.0, "y": 0.0, "theta": 0.0}
+    # Define map bounds and resolution for occupancy grid
+    xmin, xmax, ymin, ymax = -5.0, 15.0, -5.0, 15.0  # adjust to your map
+    resolution = 0.2
 
+    print("Building occupancy grid...")
+    occ, xs, ys = build_occupancy_grid(
+        xmin, xmax, ymin, ymax, resolution
+    )
+    print(f"Occupancy grid shape: {occ.shape}")
+
+    # Initialize particle filter
     pf = ParticleFilter(
-        robot_model=robot_model,
-        num_particles=500,
-        init_state=init_state
+        occ=occ,
+        xs=xs,
+        ys=ys,
+        n_particles=500,
+        lidar_max_range=10.0,
+        lidar_min_range=0.1,
+        z_lidar=0.5,
+        scan_subsample=8
     )
 
-    dt = 0.1
-    truth = {"x": -4.0, "y": 5.0, "theta": np.pi/2}
-    
-    wait_if_gui('Environment loaded. Press to start.')
-    
-    print("Starting lidar visualization. Press Ctrl+C to stop.")
-    try:
-        while True:
+    print("Particle filter initialized!")
 
-            # -------------------------
-            # 1. APPLY CONTROL (TRUTH)
-            # -------------------------
-            v, omega = compute_control(truth, waypoints[0])
+    # Simple simulation loop
+    step = 0
+    x, y, theta = 0.0, 0.0, 0.0  # initial dummy pose
+    while True:
+        time.sleep(0.05)
+        step += 1
 
-            truth["x"] += v * np.cos(truth["theta"]) * dt
-            truth["y"] += v * np.sin(truth["theta"]) * dt
-            truth["theta"] += omega * dt
-            truth["theta"] = (truth["theta"] + np.pi) % (2*np.pi) - np.pi
-            p.resetBasePositionAndOrientation(
-                pr2,
-                (truth["x"], truth["y"], 0.0),
-                p.getQuaternionFromEuler((0, 0, truth["theta"]))
-            )
+        # -----------------------------
+        # 1. Move robot (dummy motion)
+        # -----------------------------
+        dx, dy, dtheta = 0.01, 0.0, 0.02
+        x += dx
+        theta += dtheta
+        set_base_values(pr2, (x, y, theta))
 
+        # Update particles with motion + noise
+        noise = np.random.normal(0, 0.01, size=3)
+        pf.motion_update((dx + noise[0], dy + noise[1], dtheta + noise[2]))
 
-            # -------------------------
-            # 2. PARTICLE PREDICTION
-            # -------------------------
-            pf.predict(v, omega, dt)
+        # -----------------------------
+        # 2. LiDAR scan
+        # -----------------------------
+        ranges, angles, _ = create_lidar_scan(pr2, link_name)
+        visualize_lidar(ranges, angles, pr2, link_name)
 
-            # -------------------------
-            # 3. SENSOR UPDATE
-            # -------------------------
-            ranges, angles, _ = create_lidar_scan(
-                pr2, 'head_tilt_link', num_rays=360, max_range=10.0
-            )
+        # -----------------------------
+        # 3. Measurement update
+        # -----------------------------
+        pf.measurement_update(ranges, angles)
 
-            pf.update(ranges)
+        # -----------------------------
+        # 4. Resample if necessary
+        # -----------------------------
+        ess = pf.effective_sample_size()
+        if ess < 0.5 * pf.n_particles:
             pf.resample()
 
-            # -------------------------
-            # 4. ESTIMATE STATE
-            # -------------------------
-            est = pf.estimate()
-            print(f"PF estimate: x={est['x']:.2f}, y={est['y']:.2f}")
+        # -----------------------------
+        # 5. Estimate pose and visualize
+        # -----------------------------
+        est = pf.estimate()
+        est_start = (est[0], est[1], pf.z_lidar)
+        est_end = (est[0] + cos(est[2]) * 0.3, est[1] + sin(est[2]) * 0.3, pf.z_lidar)
+        p.addUserDebugLine(est_start, est_end, [1, 0, 0], lineWidth=3, lifeTime=0.1)
+        pf.draw_particles(life_time=0.1)
 
-            # -------------------------
-            # 5. VISUALIZATION
-            # -------------------------
-            draw_sphere_marker((est['x'], est['y'], 0.1), radius=0.1, color=(0,1,0))
-
-            visualize_lidar_pointcloud(ranges, angles, pr2, 'head_tilt_link')
-
-            print(f"TRUTH: {truth}")
-            print(f"EST: {pf.estimate()}")
+        # Optional: print step info
+        if step % 20 == 0:
+            print(f"Step {step}: Estimated pose = {est}")
 
 
-            time.sleep(dt)
-
-            
-    except KeyboardInterrupt:
-        print("\nStopping lidar visualization.")
-    
-    wait_if_gui('Done. Press to exit.')
-    disconnect()
-
-
-if __name__ == '__main__':
-    main(screenshot=False)
+if __name__ == "__main__":
+    main()
