@@ -153,24 +153,28 @@ class ParticleFilter:
         self.weights = np.ones(self.n_particles) / self.n_particles
 
     def motion_update(self, odom):
-        """
-        odom: (dx, dy, dtheta) in robot frame or global frame? We assume global frame displacements.
-        Adds Gaussian noise.
-        """
+        """odom: (dx, dy, dtheta) where dx, dy are in robot's local frame"""
         dx, dy, dtheta = odom
         sx, sy, st = self.motion_noise
-        noisy_dx = dx + np.random.normal(0, sx, size=self.n_particles)
-        noisy_dy = dy + np.random.normal(0, sy, size=self.n_particles)
-        noisy_dt = dtheta + np.random.normal(0, st, size=self.n_particles)
-        # Apply update
-        self.particles[:,0] += noisy_dx
-        self.particles[:,1] += noisy_dy
-        self.particles[:,2] += noisy_dt
-        # normalize angles
-        self.particles[:,2] = (self.particles[:,2] + np.pi) % (2*np.pi) - np.pi
-
-        # If any particle falls into an occupied cell, we could handle it (clip or re-sample)
-        # For now, we'll leave it — the measurement update will downweight such particles.
+        
+        for i in range(self.n_particles):
+            # Add noise to odometry
+            noisy_dx = dx + np.random.normal(0, sx)
+            noisy_dy = dy + np.random.normal(0, sy)
+            noisy_dt = dtheta + np.random.normal(0, st)
+            
+            # Transform from robot frame to global frame
+            theta = self.particles[i, 2]
+            cos_t = np.cos(theta)
+            sin_t = np.sin(theta)
+            
+            # Update position in global frame
+            self.particles[i, 0] += cos_t * noisy_dx - sin_t * noisy_dy
+            self.particles[i, 1] += sin_t * noisy_dx + cos_t * noisy_dy
+            self.particles[i, 2] += noisy_dt
+            
+        # Normalize angles
+        self.particles[:, 2] = (self.particles[:, 2] + np.pi) % (2*np.pi) - np.pi
 
     def measurement_update(self, real_ranges, real_angles=None, z_lidar=None, weight_clamp=(1e-300, 1e300)):
         """
@@ -291,7 +295,8 @@ class ParticleFilter:
         """
         Visualize particles as small debug lines/arrows in PyBullet.
         """
-        for x,y,t in self.particles:
-            start = (x, y, self.z_lidar)
-            end = (x + math.cos(t)*scale, y + math.sin(t)*scale, self.z_lidar)
-            p.addUserDebugLine(start, end, color, lineWidth=1, lifeTime=life_time)
+        # for particle in self.particles:
+        #     print(
+        #         f"Particle: x={particle[0]:.2f}, y={particle[1]:.2f}, theta={particle[2]:.2f}"
+        #     )
+        p.addUserDebugPoints(self.particles[:,0:3], [color]*self.n_particles, pointSize=3, lifeTime=life_time)

@@ -14,6 +14,12 @@ from pybullet_tools.utils import set_base_values, get_link_pose, link_from_name
 if sys.platform == 'win32':
     os.environ['DISPLAY'] = ':0'
 
+# Waypoint list
+waypoints = [(-4.0, 0.0), (-12.0, 0.0), (-12.0, 7.0), (-4.0, 7.0)]
+
+linear_speed = 0.05      # m per update step
+angular_speed = 0.15     # rad per update step
+wp_threshold = 0.2       # how close counts as "reached"
 
 def main():
     print("Connecting to PyBullet GUI...")
@@ -25,10 +31,10 @@ def main():
     # Load environment
     robots, obstacles = load_env("8path_env.json")
     pr2 = robots.get("pr2", list(robots.values())[0])
-    link_name = "head_tilt_link"
+    link_name = "base_link"
 
     # Define map bounds and resolution for occupancy grid
-    xmin, xmax, ymin, ymax = -5.0, 15.0, -5.0, 15.0  # adjust to your map
+    xmin, xmax, ymin, ymax = -15.0, 0.0, 0.0, 15.0  # adjust to your map
     resolution = 0.2
 
     print("Building occupancy grid...")
@@ -52,54 +58,74 @@ def main():
     print("Particle filter initialized!")
 
     # Simple simulation loop
-    step = 0
-    x, y, theta = 0.0, 0.0, 0.0  # initial dummy pose
+    step_num = 0
+    x, y, theta = -4.0, 5.0, np.pi/2  # initial dummy pose
+    # After setting initial pose
+    pf.particles[:, 0] = x + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 1] = y + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 2] = theta + np.random.normal(0, 0.3, pf.n_particles)
+    current_wp = 0
+
     while True:
         time.sleep(0.05)
-        step += 1
+        step_num += 1
 
-        # -----------------------------
-        # 1. Move robot (dummy motion)
-        # -----------------------------
-        dx, dy, dtheta = 0.01, 0.0, 0.02
-        x += dx
-        theta += dtheta
+        # Store previous pose
+        x_prev, y_prev, theta_prev = x, y, theta
+
+        # ---- Motion Control ----
+        wp_x, wp_y = waypoints[current_wp]
+        dx_to_goal = wp_x - x
+        dy_to_goal = wp_y - y
+        target_theta = np.arctan2(dy_to_goal, dx_to_goal)
+        dtheta = (target_theta - theta + np.pi) % (2*np.pi) - np.pi
+
+        # Execute motion
+        if abs(dtheta) < 0.3:
+            dist = np.sqrt(dx_to_goal**2 + dy_to_goal**2)
+            step = min(dist, linear_speed)
+            x += step * np.cos(theta)
+            y += step * np.sin(theta)
+
+        theta += np.clip(dtheta, -angular_speed, +angular_speed)
+        theta = (theta + np.pi) % (2*np.pi) - np.pi
+        
         set_base_values(pr2, (x, y, theta))
 
-        # Update particles with motion + noise
-        noise = np.random.normal(0, 0.01, size=3)
-        pf.motion_update((dx + noise[0], dy + noise[1], dtheta + noise[2]))
+        # Check waypoint
+        if np.hypot(wp_x - x, wp_y - y) < wp_threshold:
+            current_wp = (current_wp + 1) % len(waypoints)
+            print(f"Reached waypoint → moving to WP {current_wp}")
 
-        # -----------------------------
-        # 2. LiDAR scan
-        # -----------------------------
+        # ---- Particle Filter Update ----
+        # Compute actual odometry (what the robot actually did)
+        actual_dx = x - x_prev
+        actual_dy = y - y_prev
+        actual_dtheta = theta - theta_prev
+        actual_dtheta = (actual_dtheta + np.pi) % (2*np.pi) - np.pi
+        
+        # Update particles with actual motion
+        pf.motion_update((actual_dx, actual_dy, actual_dtheta))
+
+        # LiDAR and measurement update
         ranges, angles, _ = create_lidar_scan(pr2, link_name)
         visualize_lidar(ranges, angles, pr2, link_name)
-
-        # -----------------------------
-        # 3. Measurement update
-        # -----------------------------
         pf.measurement_update(ranges, angles)
 
-        # -----------------------------
-        # 4. Resample if necessary
-        # -----------------------------
+        # Resample if needed
         ess = pf.effective_sample_size()
         if ess < 0.5 * pf.n_particles:
             pf.resample()
 
-        # -----------------------------
-        # 5. Estimate pose and visualize
-        # -----------------------------
+        # Visualize
         est = pf.estimate()
         est_start = (est[0], est[1], pf.z_lidar)
         est_end = (est[0] + cos(est[2]) * 0.3, est[1] + sin(est[2]) * 0.3, pf.z_lidar)
         p.addUserDebugLine(est_start, est_end, [1, 0, 0], lineWidth=3, lifeTime=0.1)
         pf.draw_particles(life_time=0.1)
 
-        # Optional: print step info
-        if step % 20 == 0:
-            print(f"Step {step}: Estimated pose = {est}")
+        true_pose = get_link_pose(pr2, link_from_name(pr2, "base_link"))
+        print(f"Step {step_num}: Est={est}, True={true_pose[0][:2]}, theta_diff={abs(est[2]-true_pose[1][2]):.3f}")
 
 
 if __name__ == "__main__":
