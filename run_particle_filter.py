@@ -176,6 +176,5 @@ def main():
         
         print(f"Step {step_num}: Est=({est[0]:.2f}, {est[1]:.2f}, {est[2]:.2f}), True=({true_x:.2f}, {true_y:.2f}, {true_theta:.2f})")
 
-
 if __name__ == "__main__":
     main()
