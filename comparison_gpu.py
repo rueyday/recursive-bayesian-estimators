@@ -5,9 +5,10 @@ import pybullet as p
 import time
 from math import cos, sin
 
+# Assuming these files now import cupy as cp internally for performance
 from lidar_utils import create_lidar_scan, visualize_lidar
-from particle_model import ParticleFilter, build_occupancy_grid
-from kalman_model import ExtendedKalmanFilter
+from particle_model_gpu import ParticleFilter, build_occupancy_grid
+from kalman_model_gpu import ExtendedKalmanFilter
 from utils import load_env
 from pybullet_tools.utils import set_base_values, get_link_pose, link_from_name, get_base_values
 
@@ -35,7 +36,7 @@ waypoints = [
 
 linear_speed = 0.2      # m per update step
 angular_speed = 0.5     # rad per update step
-wp_threshold = 0.2       # how close counts as "reached"
+wp_threshold = 0.2      # how close counts as "reached"
 
 def set_base_link_pose(robot, x_link, y_link, theta_link):
     """
@@ -67,7 +68,7 @@ def set_base_link_pose(robot, x_link, y_link, theta_link):
 
 def main():
     print("=" * 60)
-    print("PARTICLE FILTER vs EXTENDED KALMAN FILTER COMPARISON")
+    print("PARTICLE FILTER vs EXTENDED KALMAN FILTER COMPARISON (CuPy OPTIMIZED)")
     print("=" * 60)
     print("\nConnecting to PyBullet GUI...")
     client = p.connect(p.GUI)
@@ -90,6 +91,7 @@ def main():
 
     # Initialize Particle Filter
     print("\nInitializing Particle Filter...")
+    # CuPy will handle particle/weight arrays internally
     pf = ParticleFilter(
         occ=occ,
         xs=xs,
@@ -98,7 +100,7 @@ def main():
         lidar_max_range=10.0,
         lidar_min_range=0.1,
         z_lidar=0.5,
-        scan_subsample=8
+        scan_subsample=8 # Keep subsample as is, increase if needed
     )
 
     # Initialize Extended Kalman Filter
@@ -115,30 +117,15 @@ def main():
 
     # Initial pose
     x, y, theta = -2.5, 6.0, np.pi/2
-    # 1. -2.5, 6.0
-    # 2. -2.5, 2.2
-    # 3. 0, 2.2
-    # 3. 0, -2.2
-    # 3. 2.5, -2.2
-    # 3. 2.5, -6.0
-    # 3. -2.5, -6.0
-    # 3. -2.5, -2.2
-    # 3. 0, -2.2
-    # 3. 0, 2.2
-    # 2. 2.5, 2.2
-    # 1. 2.5, 6.0
-    # 1. -2.5, 6.0
     set_base_link_pose(pr2, x, y, theta)
     
-    # Initialize PF particles around starting pose
-    pf.particles[:, 0] = x + np.random.normal(0, 0.5, pf.n_particles)
-    pf.particles[:, 1] = y + np.random.normal(0, 0.5, pf.n_particles)
-    pf.particles[:, 2] = theta + np.random.normal(0, 0.3, pf.n_particles)
-    pf.weights = np.ones(pf.n_particles) / pf.n_particles
+    # Initialize PF particles around starting pose (done with cupy inside pf)
+    # The PF class now handles the CPU/GPU transfer for initialization internally
+    pf.initialize_pose(x, y, theta) # New helper function for cleaner initialization
 
     print("\n" + "=" * 60)
     print("Both filters initialized! Starting comparison...")
-    print("Colors: RED = PF estimate, BLUE = EKF estimate, GREEN = PF particles")
+    print("NOTE: Debug visualization has been disabled for maximum speed.")
     print("=" * 60 + "\n")
 
     step_num = 0
@@ -151,14 +138,13 @@ def main():
     ekf_theta_errors = []
 
     while True:
-        # time.sleep(0.05)
-        # time.sleep(0.01)
+        # time.sleep(0.05) # Keep commented out for max speed
         step_num += 1
 
         # Store previous pose
         x_prev, y_prev, theta_prev = x, y, theta
 
-        # Move toward current waypoint
+        # Move toward current waypoint (controller logic unchanged)
         wp_x, wp_y = waypoints[current_wp]
         dx_to_goal = wp_x - x
         dy_to_goal = wp_y - y
@@ -189,15 +175,13 @@ def main():
         actual_dtheta = theta - theta_prev
         actual_dtheta = (actual_dtheta + np.pi) % (2*np.pi) - np.pi
         
-        
-
-        # LiDAR scan
+        # LiDAR scan (PyBullet call, CPU-bound)
         ranges, angles, _ = create_lidar_scan(pr2, link_name)
-        visualize_lidar(ranges, angles, pr2, link_name)
+        # visualize_lidar(ranges, angles, pr2, link_name) # Visualizing lidar is slow, keep commented
 
-        # Update both filters - Motion model
-        # Update both filters - Measurement model
+        # Update both filters
         pf_start_time = time.time()
+        # PF operations now run on GPU
         pf.motion_update((actual_dx, actual_dy, actual_dtheta))
         pf.measurement_update(ranges, angles)
         pf_elapsed = time.time() - pf_start_time
@@ -212,19 +196,16 @@ def main():
         if ess < 0.5 * pf.n_particles:
             pf.resample()
 
-        # Get estimates
+        # Get estimates (PF estimate is now forced to CPU for display/error calc)
         pf_est = pf.estimate()
         ekf_est = ekf.estimate()
 
-        # Visualize
-        # PF: Red arrow + green particles
-        pf_start = (pf_est[0], pf_est[1], pf.z_lidar)
-        pf_end = (pf_est[0] + cos(pf_est[2]) * 0.3, pf_est[1] + sin(pf_est[2]) * 0.3, pf.z_lidar)
-        p.addUserDebugLine(pf_start, pf_end, [1, 0, 0], lineWidth=3, lifeTime=0.1)
-        pf.draw_particles(life_time=0.1)
-        
-        # EKF: Blue arrow + uncertainty ellipse
-        ekf.draw_estimate(color=[0, 0, 1], life_time=0.1)
+        # Visualize (Commented out for speed)
+        # pf_start = (pf_est[0], pf_est[1], pf.z_lidar)
+        # pf_end = (pf_est[0] + cos(pf_est[2]) * 0.3, pf_est[1] + sin(pf_est[2]) * 0.3, pf.z_lidar)
+        # p.addUserDebugLine(pf_start, pf_end, [1, 0, 0], lineWidth=3, lifeTime=0.1)
+        # pf.draw_particles(life_time=0.1) # This is slow
+        # ekf.draw_estimate(color=[0, 0, 1], life_time=0.1) # This is slow
 
         # Get true pose
         link_pose = get_link_pose(pr2, link_from_name(pr2, link_name))
@@ -246,7 +227,6 @@ def main():
         P = ekf.get_covariance()
         ekf_pos_uncertainty = np.sqrt(P[0,0] + P[1,1])
         
-        # print(f"Step {step_num}:")
         print(f"Step {step_num}: PF time = {pf_elapsed*1000:.2f} ms, EKF time = {ekf_elapsed*1000:.2f} ms")
         print(f"  True  = ({true_x:.2f}, {true_y:.2f}, {true_theta:.2f})")
         print(f"  PF    = ({pf_est[0]:.2f}, {pf_est[1]:.2f}, {pf_est[2]:.2f}) | Error: {pf_pos_error:.3f}m, {np.degrees(pf_theta_error):.1f}°")
