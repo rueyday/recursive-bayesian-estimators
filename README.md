@@ -1,14 +1,3 @@
-## TODO
-- Kalman filter (Ruey)
-- Particle filter (Cindy)
-- create failed Kalman filter case (both)
-
-## DONE
-- create environment in pybullet (1 environment each)
-- create sensor model (input current location, output lidar scan type thing) (Ruey)
-- create motion model (Cindy)
-
-
 ## Assignment
 Localization. Consider the PR2 robot navigating in an environment with obstacles. Implement a
 function that simulates a simple location sensor in pybullet (i.e. the function should return a slightly
