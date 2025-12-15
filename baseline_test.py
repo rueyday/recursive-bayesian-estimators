@@ -136,8 +136,16 @@ def main():
     # --------------------------------------------------------
     # MAIN LOOP
     # --------------------------------------------------------
+    print("Running baseline comparison...")
+    print(f"Total steps: {NUM_STEPS}")
+    print("Progress: ", end='', flush=True)
+    
     for step in range(NUM_STEPS):
         time.sleep(0.03)
+        
+        # Progress indicator
+        if step % 100 == 0:
+            print(f"{step}...", end='', flush=True)
 
         x_prev, y_prev, theta_prev = x, y, theta
 
@@ -198,6 +206,8 @@ def main():
         pf_estimates.append(pf_est)
         ekf_estimates.append(ekf_est)
 
+    print("Done!")
+    
     # --------------------------------------------------------
     # SAVE DATA
     # --------------------------------------------------------
@@ -211,6 +221,23 @@ def main():
     )
 
     print("Data saved to baseline_filter_data.npz")
+    
+    # Disconnect PyBullet and clean up
+    print("Closing PyBullet simulation...")
+    try:
+        p.disconnect(client)
+    except:
+        pass
+    
+    # Clean up CLIENTS dictionary
+    try:
+        if hasattr(sys.modules["pybullet_tools.utils"], "CLIENTS"):
+            if client in sys.modules["pybullet_tools.utils"].CLIENTS:
+                del sys.modules["pybullet_tools.utils"].CLIENTS[client]
+    except:
+        pass
+    
+    return client
 
 
 if __name__ == "__main__":

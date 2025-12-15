@@ -237,7 +237,7 @@ def main():
                              textSize=2, lifeTime=0.1)
 
         # Get true pose
-        link_pose = get_link_pose(pr2, link_from_name(pr2, link_name))
+        link_pose = get_link_pose(pr2, link_from_name(pr2, "base_link"))
         true_x_actual, true_y_actual = link_pose[0][0], link_pose[0][1]
         true_theta_actual = p.getEulerFromQuaternion(link_pose[1])[2]
         
@@ -277,6 +277,23 @@ def main():
     print("can drift into physically impossible locations. The Particle Filter")
     print("maintains separate hypothesis clusters and correctly disambiguates.")
     print("=" * 70)
+    
+    # Disconnect PyBullet and clean up
+    print("\nClosing PyBullet simulation...")
+    try:
+        p.disconnect(client)
+    except:
+        pass
+    
+    # Clean up CLIENTS dictionary
+    try:
+        if hasattr(sys.modules["pybullet_tools.utils"], "CLIENTS"):
+            if client in sys.modules["pybullet_tools.utils"].CLIENTS:
+                del sys.modules["pybullet_tools.utils"].CLIENTS[client]
+    except:
+        pass
+    
+    return client
 
 
 if __name__ == "__main__":
