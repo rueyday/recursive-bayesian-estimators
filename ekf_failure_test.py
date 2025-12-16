@@ -64,6 +64,7 @@ def wrap_angle(a):
 def main():
     valid_pf_fraction = 0.0
     valid_ekf_fraction = 0.0
+    NUM_STEPS = 50
     print("=" * 70)
     print("EKF FAILURE CASE: SYMMETRIC ENVIRONMENT TEST")
     print("=" * 70)
@@ -167,7 +168,7 @@ def main():
     ekf_in_obstacle_count = 0
     ekf_impossible_steps = []
 
-    while step_num < 50:  # Run for 200 steps
+    while step_num < NUM_STEPS:  # Run for 200 steps
         time.sleep(0.05)
         step_num += 1
 

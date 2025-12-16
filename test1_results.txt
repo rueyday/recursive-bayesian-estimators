@@ -1,0 +1,10 @@
+TEST 1: BASELINE PERFORMANCE COMPARISON
+======================================================================
+
+Table 1: Baseline Performance Comparison
+----------------------------------------------------------------------
+Filter                    Position RMSE      Orientation RMSE     Computation Time
+----------------------------------------------------------------------
+Particle Filter                7.285 m           1.817 rad          272.05 ms
+Extended Kalman Filter         7.765 m           1.921 rad            3.49 ms
+----------------------------------------------------------------------

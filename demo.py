@@ -217,11 +217,6 @@ def print_summary():
     print("  • Multimodal case (global localization, symmetry) → PF necessary")
     print("=" * 70)
     print()
-    print("Output files generated:")
-    print("  - test1_results.txt (Baseline performance data)")
-    print("  - test2_results.txt (Failure case data)")
-    print("  - baseline_filter_data.npz (Raw experimental data)")
-    print("=" * 70 + "\n")
 
 def main():
     print_banner("PARTICLE FILTER vs EKF LOCALIZATION DEMO")
