@@ -1,4 +1,4 @@
-# baseline_calculator_v2.py - CORRECTED VERSION
+# baseline_calculator_COMPLETE_FIX.py
 import os
 import sys
 import time
@@ -109,38 +109,58 @@ def main():
         return
 
     # --------------------------------------------------------
-    # OCCUPANCY GRID & FILTERS INIT
+    # OCCUPANCY GRID
     # --------------------------------------------------------
     occ, xs, ys = build_occupancy_grid(xmin=-8.0, xmax=8.0, ymin=-8.0, ymax=8.0, resolution=0.2)
 
-    # CORRECTED: Increased motion noise and more particles
+    # --------------------------------------------------------
+    # INITIAL TRUE STATE - GET ACTUAL POSE FROM PYBULLET
+    # --------------------------------------------------------
+    x_target, y_target, theta_target = -2.5, 6.0, np.pi / 2
+    set_base_link_pose(robot_id, x_target, y_target, theta_target)
+    
+    # READ BACK ACTUAL POSE (there's an offset in PR2 model)
+    link_pose = get_link_pose(robot_id, link_from_name(robot_id, link_name))
+    x, y = link_pose[0][0], link_pose[0][1]
+    quat = link_pose[1]
+    euler = p.getEulerFromQuaternion(quat)
+    theta = euler[2]
+    
+    print(f"Initialized robot:")
+    print(f"  Target:  x={x_target:.3f}, y={y_target:.3f}, theta={theta_target:.3f} ({theta_target*180/np.pi:.1f}°)")
+    print(f"  Actual:  x={x:.3f}, y={y:.3f}, theta={theta:.3f} ({theta*180/np.pi:.1f}°)")
+
+    # --------------------------------------------------------
+    # FILTERS INIT - USE ACTUAL POSE
+    # --------------------------------------------------------
     pf = ParticleFilter(
         occ=occ, xs=xs, ys=ys, 
-        n_particles=1000,  # Increased from 500
+        n_particles=1000,
         lidar_max_range=10.0,
         lidar_min_range=0.1, 
         z_lidar=0.5, 
-        scan_subsample=4,  # Reduced from 8 for better measurement
-        motion_noise=(0.1, 0.1, 0.1),  # Increased from (0.02, 0.02, 0.01)
-        sigma_range=0.3  # Increased from 0.2
+        scan_subsample=4,
+        motion_noise=(0.1, 0.1, 0.1),
+        sigma_range=0.3
     )
+    
+    # Initialize PF particles around ACTUAL pose
+    pf.particles[:, 0] = x + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 1] = y + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 2] = theta + np.random.normal(0, 0.5, pf.n_particles)
+    pf.weights[:] = 1.0 / pf.n_particles
 
+    # Initialize EKF with ACTUAL pose
     ekf = ExtendedKalmanFilter(
-        initial_pose=(-2.5, 6.0, np.pi/2), 
-        motion_noise=(0.05, 0.05, 0.03),  # Increased
+        initial_pose=(x, y, theta),  # Use ACTUAL pose!
+        motion_noise=(0.1, 0.1, 0.1),
         lidar_max_range=10.0, 
         lidar_min_range=0.1, 
         z_lidar=0.5,
-        sigma_range=0.3,  # Increased
-        scan_subsample=4  # Reduced from 8
+        sigma_range=0.3,
+        scan_subsample=4
     )
-
-    # CORRECTED: Larger initial uncertainty
-    ekf.P = 1.0 * np.eye(3)  # Increased from 0.5
-    pf.particles[:, 0] = -2.5 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.1
-    pf.particles[:, 1] = 6.0 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.1
-    pf.particles[:, 2] = np.pi/2 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.3
-    pf.weights[:] = 1.0 / pf.n_particles
+    ekf.P = 1.0 * np.eye(3)
 
     # --------------------------------------------------------
     # DATA LOGS
@@ -151,17 +171,12 @@ def main():
     pf_times = []
     ekf_times = []
 
-    # --------------------------------------------------------
-    # INITIAL TRUE STATE
-    # --------------------------------------------------------
-    x, y, theta = -2.5, 6.0, np.pi / 2
-    set_base_link_pose(robot_id, x, y, theta)
     current_wp = len(waypoints) - 1 
 
     # --------------------------------------------------------
     # MAIN LOOP
     # --------------------------------------------------------
-    print("Running baseline comparison simulation...")
+    print("\nRunning baseline comparison simulation...")
     print(f"Total steps: {NUM_STEPS}")
     print("Progress: ", end='', flush=True)
     
@@ -193,27 +208,25 @@ def main():
         if hypot(dx_to_wp, dy_to_wp) < wp_threshold:
             current_wp = (current_wp + 1) % len(waypoints)
 
-        # ---- CORRECTED ODOMETRY CALCULATION ----
-        # Calculate displacement in global frame
+        # ---- ODOMETRY CALCULATION ----
+        # Calculate displacement in GLOBAL frame (what actually happened)
         dx_global = x - x_prev
         dy_global = y - y_prev
         delta_theta = wrap_angle(theta - theta_prev)
         
-        # CRITICAL FIX: Transform to robot's LOCAL frame using PREVIOUS orientation
-        # This gives us the motion in the robot's coordinate system
+        # For particle filter: convert to local frame using PREVIOUS orientation
         cos_prev = cos(theta_prev)
         sin_prev = sin(theta_prev)
-        
-        # Inverse rotation: R^T * [dx_global, dy_global]
         dx_local = cos_prev * dx_global + sin_prev * dy_global
         dy_local = -sin_prev * dx_global + cos_prev * dy_global
+        odom_pf = (dx_local, dy_local, delta_theta)
         
-        # Now odometry is correctly in the robot's local frame
-        odom = (dx_local, dy_local, delta_theta)
+        # For EKF: use global frame directly
+        odom_ekf = (dx_global, dy_global, delta_theta)
 
         # ---- MOTION/MEASUREMENT UPDATE ----
-        pf.motion_update(odom)
-        ekf.motion_update(odom)
+        pf.motion_update(odom_pf)
+        ekf.motion_update(odom_ekf)
 
         ranges, angles, _ = create_lidar_scan(robot_id, link_name)
 
@@ -225,7 +238,7 @@ def main():
         ekf.measurement_update(ranges, angles)
         ekf_times.append(time.time() - t0)
 
-        if pf.effective_sample_size() < 0.3 * pf.n_particles:  # Changed from 0.5
+        if pf.effective_sample_size() < 0.3 * pf.n_particles:
             pf.resample()
         
         pf_est = pf.estimate()
