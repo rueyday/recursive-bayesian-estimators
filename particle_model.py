@@ -309,12 +309,24 @@ class ParticleFilter:
         theta_mean = math.atan2(sin_mean, cos_mean)
         return (x_mean, y_mean, theta_mean)
 
-    def draw_particles(self, scale=0.05, color=[0,1,0], life_time=0.1):
+    def estimate_map(self):
+        """Maximum a posteriori estimate"""
+        idx = np.argmax(self.weights)
+        return self.particles[idx]
+
+
+    def draw_particles(self, z=0.1, scale=0.05, color=[0,1,0], life_time=0.1):
         """
-        Visualize particles as small debug lines/arrows in PyBullet.
+        Visualize particles as points at fixed height z.
         """
-        # for particle in self.particles:
-        #     print(
-        #         f"Particle: x={particle[0]:.2f}, y={particle[1]:.2f}, theta={particle[2]:.2f}"
-        #     )
-        p.addUserDebugPoints(self.particles[:,0:3], [color]*self.n_particles, pointSize=3, lifeTime=life_time)
+        pts = np.zeros((self.n_particles, 3))
+        pts[:, 0] = self.particles[:, 0]  # x
+        pts[:, 1] = self.particles[:, 1]  # y
+        pts[:, 2] = z                     # FIXED positive z
+
+        p.addUserDebugPoints(
+            pts,
+            [color] * self.n_particles,
+            pointSize=3,
+            lifeTime=life_time
+        )
