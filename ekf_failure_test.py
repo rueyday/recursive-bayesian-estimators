@@ -62,6 +62,8 @@ def wrap_angle(a):
     return (a + np.pi) % (2*np.pi) - np.pi
 
 def main():
+    valid_pf_fraction = 0.0
+    valid_ekf_fraction = 0.0
     print("=" * 70)
     print("EKF FAILURE CASE: SYMMETRIC ENVIRONMENT TEST")
     print("=" * 70)
@@ -165,7 +167,7 @@ def main():
     ekf_in_obstacle_count = 0
     ekf_impossible_steps = []
 
-    while step_num < 200:  # Run for 200 steps
+    while step_num < 50:  # Run for 200 steps
         time.sleep(0.05)
         step_num += 1
 
@@ -257,15 +259,22 @@ def main():
         # Calculate errors
         pf_pos_error = hypot(pf_est[0] - true_x_actual, pf_est[1] - true_y_actual)
         ekf_pos_error = hypot(ekf_est[0] - true_x_actual, ekf_est[1] - true_y_actual)
+
+        # Update valid estimate fractions
+        if is_pose_in_obstacle(pf_est[0], pf_est[1], occ, xs, ys):
+            valid_pf_fraction += 0.0
+        else:
+            valid_pf_fraction += 1.0
+        if is_pose_in_obstacle(ekf_est[0], ekf_est[1], occ, xs, ys):
+            valid_ekf_fraction += 0.0
+        else:
+            valid_ekf_fraction += 1.0
         
         if step_num % 10 == 0:
             print(f"Step {step_num:3d}:")
-            print(f"  True  = ({true_x_actual:5.2f}, {true_y_actual:5.2f})")
-            print(f"  PF    = ({pf_est[0]:5.2f}, {pf_est[1]:5.2f}) | Error: {pf_pos_error:.3f}m")
-            print(f"  EKF   = ({ekf_est[0]:5.2f}, {ekf_est[1]:5.2f}) | Error: {ekf_pos_error:.3f}m" + 
-                  (" *** IN OBSTACLE ***" if ekf_in_obstacle else ""))
-            print(f"  ESS   = {ess:.0f}")
-            print()
+            print(f"  PF Estimate: ({pf_est[0]:.2f}, {pf_est[1]:.2f}, {pf_est[2]:.2f}) | Valid: {100*valid_pf_fraction/step_num:.1f}%")
+            print(f"  EKF Estimate: ({ekf_est[0]:.2f}, {ekf_est[1]:.2f}, {ekf_est[2]:.2f}) | Valid: {100*valid_ekf_fraction/step_num:.1f}%")
+
 
     # Final report
     print("\n" + "=" * 70)

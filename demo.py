@@ -16,7 +16,7 @@ def print_banner(text):
 
 def run_ekf_failure_demo():
     """Run the EKF failure case demonstration"""
-    print_banner("DEMO 1: EKF FAILURE IN SYMMETRIC ENVIRONMENT")
+    print_banner("DEMO 2: EKF FAILURE IN SYMMETRIC ENVIRONMENT")
     print("This demo shows how EKF fails when faced with symmetric/ambiguous")
     print("initial conditions. The EKF mean will drift into obstacles while")
     print("the Particle Filter maintains valid hypotheses.")
@@ -57,7 +57,7 @@ def run_ekf_failure_demo():
 
 def run_baseline_comparison():
     """Run the baseline comparison demonstration"""
-    print_banner("DEMO 2: BASELINE COMPARISON ON FIGURE-8 TRAJECTORY")
+    print_banner("DEMO 1: BASELINE COMPARISON ON FIGURE-8 TRAJECTORY")
     print("This demo compares Particle Filter and EKF performance on a complex")
     print("figure-8 trajectory, measuring accuracy and computational efficiency.")
     print("\nExpected runtime: 10 minutes")

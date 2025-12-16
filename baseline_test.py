@@ -11,7 +11,7 @@ from math import cos, sin, atan2, hypot
 # =================================================================
 
 try:
-    from lidar_utils import create_lidar_scan
+    from lidar_utils import create_lidar_scan, visualize_lidar
     from particle_model import ParticleFilter, build_occupancy_grid
     from kalman_model import ExtendedKalmanFilter
     from utils import load_env
@@ -33,7 +33,7 @@ waypoints = [
 linear_speed = 0.05
 angular_speed = 0.15
 wp_threshold = 0.2
-NUM_STEPS = 900
+NUM_STEPS = 300
 
 # ============================================================
 # HELPERS
@@ -127,8 +127,8 @@ def main():
     theta = euler[2]
     
     print(f"Initialized robot:")
-    print(f"  Target:  x={x_target:.3f}, y={y_target:.3f}, theta={theta_target:.3f} ({theta_target*180/np.pi:.1f}°)")
-    print(f"  Actual:  x={x:.3f}, y={y:.3f}, theta={theta:.3f} ({theta*180/np.pi:.1f}°)")
+    print(f"  Target:  x={x_target:.3f}, y={y_target:.3f}")
+    print(f"  Actual:  x={x:.3f}, y={y:.3f}")
 
     # --------------------------------------------------------
     # FILTERS INIT - USE ACTUAL POSE
@@ -249,11 +249,12 @@ def main():
         
         if (step + 1) % 20 == 0:
             print(f"\nStep {step+1}:")
-            print(f"  True Pose: ({x:.2f}, {y:.2f}, {theta:.2f})")
-            print(f"  PF  Estimate: ({pf_est[0]:.2f}, {pf_est[1]:.2f}, {pf_est[2]:.2f}) | Error: {pf_pos_err:.3f} m")
-            print(f"  EKF Estimate: ({ekf_est[0]:.2f}, {ekf_est[1]:.2f}, {ekf_est[2]:.2f}) | Error: {ekf_pos_err:.3f} m")
+            print(f"  True Pose: ({x:.2f}, {y:.2f}")
+            print(f"  PF  Estimate: ({pf_est[0]:.2f}, {pf_est[1]:.2f}) | Error: {pf_pos_err:.3f} m")
+            print(f"  EKF Estimate: ({ekf_est[0]:.2f}, {ekf_est[1]:.2f}) | Error: {ekf_pos_err:.3f} m")
 
         # ---- LOG DATA ----
+        visualize_lidar(ranges, angles, robot_id, link_name)
         true_poses.append([x, y, theta])
         pf_estimates.append(pf.estimate())
         ekf_estimates.append(ekf.estimate())
@@ -275,14 +276,14 @@ def main():
 
     print(f"\nTable 1: Baseline Performance Comparison ({NUM_STEPS} Steps)")
     print("{:<25}{:<15}{:<20}{}".format(
-        "Filter", "Position RMSE", "Orientation RMSE", "Comp. Time/Step"
+        "Filter", "Position RMSE", "Comp. Time/Step"
     ))
     print("-" * 75)
     print("{:<25}{:<15.3f}{:<20.3f}{:.2f} ms".format(
-        "Particle Filter", pf_pos_rmse, pf_theta_rmse, avg_pf_time_ms
+        "Particle Filter", pf_pos_rmse, avg_pf_time_ms
     ))
     print("{:<25}{:<15.3f}{:<20.3f}{:.2f} ms".format(
-        "Extended Kalman Filter", ekf_pos_rmse, ekf_theta_rmse, avg_ekf_time_ms
+        "Extended Kalman Filter", ekf_pos_rmse, avg_ekf_time_ms
     ))
     print("="*50)
 
