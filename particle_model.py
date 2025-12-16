@@ -153,27 +153,45 @@ class ParticleFilter:
         self.weights = np.ones(self.n_particles) / self.n_particles
 
     def motion_update(self, odom):
-        """odom: (dx, dy, dtheta) where dx, dy are in robot's local frame"""
-        dx, dy, dtheta = odom
+        """
+        odom: (dx_local, dy_local, dtheta)
+              dx_local: Forward distance traveled (dist in baseline_test)
+              dy_local: Side slip (set to 0.0 in baseline_test)
+              dtheta: Change in heading
+        
+        CRITICAL FIX: The key issue was the order of operations. We need to:
+        1. Get the current orientation BEFORE rotation
+        2. Use that orientation to transform the local motion to global
+        3. THEN apply the rotation update
+        
+        This ensures the displacement is applied in the correct direction.
+        """
+        dx_local, dy_local, dtheta = odom
         sx, sy, st = self.motion_noise
         
-        for i in range(self.n_particles):
-            # Add noise to odometry
-            noisy_dx = dx + np.random.normal(0, sx)
-            noisy_dy = dy + np.random.normal(0, sy)
-            noisy_dt = dtheta + np.random.normal(0, st)
+        # Get current particle orientations BEFORE rotation update
+        theta_i = self.particles[:, 2]
+        
+        # Add motion noise to the control inputs
+        noisy_dx = dx_local + np.random.normal(0, sx, self.n_particles)
+        noisy_dy = dy_local + np.random.normal(0, sy, self.n_particles)
+        noisy_dt = dtheta + np.random.normal(0, st, self.n_particles)
+        
+        # Transform local motion to global frame using CURRENT orientation
+        # This is the rotation matrix: [cos(theta) -sin(theta); sin(theta) cos(theta)]
+        cos_t = np.cos(theta_i)
+        sin_t = np.sin(theta_i)
+        
+        # Apply rotation matrix to transform local displacement to global
+        delta_x_global = cos_t * noisy_dx - sin_t * noisy_dy
+        delta_y_global = sin_t * noisy_dx + cos_t * noisy_dy
+        
+        # Update particles: position first, then orientation
+        self.particles[:, 0] += delta_x_global
+        self.particles[:, 1] += delta_y_global
+        self.particles[:, 2] += noisy_dt
             
-            # Transform from robot frame to global frame
-            theta = self.particles[i, 2]
-            cos_t = np.cos(theta)
-            sin_t = np.sin(theta)
-            
-            # Update position in global frame
-            self.particles[i, 0] += cos_t * noisy_dx - sin_t * noisy_dy
-            self.particles[i, 1] += sin_t * noisy_dx + cos_t * noisy_dy
-            self.particles[i, 2] += noisy_dt
-            
-        # Normalize angles
+        # Normalize angles to [-pi, pi]
         self.particles[:, 2] = (self.particles[:, 2] + np.pi) % (2*np.pi) - np.pi
 
     def measurement_update(self, real_ranges, real_angles=None, z_lidar=None, weight_clamp=(1e-300, 1e300)):

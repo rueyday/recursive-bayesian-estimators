@@ -8,7 +8,7 @@
           "head_pan_joint": [0.0],
           "head_tilt_joint": [0.0]
         },
-        "point": { "x": 5, "y": 0, "z": 0 },
+        "point": { "x": -2.5, "y": 6.0, "z": 0 },
         "quat": { "w": 1, "x": 0, "y": 0, "z": 1 }
       }
     ],

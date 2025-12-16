@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import pybullet as p
 import time
-from math import cos, sin
+from math import cos, sin, atan2, hypot
 
 from lidar_utils import create_lidar_scan, visualize_lidar
 from particle_model import ParticleFilter, build_occupancy_grid
@@ -57,6 +57,10 @@ def is_pose_in_obstacle(x, y, occ, xs, ys):
     
     return occ[j, i] == 1
 
+def wrap_angle(a):
+    """Wrap angle to [-pi, pi]"""
+    return (a + np.pi) % (2*np.pi) - np.pi
+
 def main():
     print("=" * 70)
     print("EKF FAILURE CASE: SYMMETRIC ENVIRONMENT TEST")
@@ -88,11 +92,13 @@ def main():
     print("Initializing Particle Filter with bimodal distribution...")
     pf = ParticleFilter(
         occ=occ, xs=xs, ys=ys,
-        n_particles=500,
+        n_particles=1000,  # Increased from 500
         lidar_max_range=10.0,
         lidar_min_range=0.1,
         z_lidar=0.5,
-        scan_subsample=8
+        scan_subsample=4,  # Reduced from 8 for better measurements
+        motion_noise=(0.1, 0.1, 0.1),  # Increased motion noise
+        sigma_range=0.3  # Increased measurement noise
     )
 
     # TRUE POSE (robot's actual location)
@@ -120,12 +126,12 @@ def main():
     ekf_init_y = (true_y + symmetric_y) / 2  # 0.0
     ekf = ExtendedKalmanFilter(
         initial_pose=(ekf_init_x, ekf_init_y, true_theta),
-        motion_noise=(0.02, 0.02, 0.01),
+        motion_noise=(0.05, 0.05, 0.03),  # Increased motion noise
         lidar_max_range=10.0,
         lidar_min_range=0.1,
         z_lidar=0.5,
-        sigma_range=0.2,
-        scan_subsample=8
+        sigma_range=0.3,  # Increased measurement noise
+        scan_subsample=4  # Reduced from 8
     )
     ekf.P = np.diag([4.0, 4.0, 0.25])  # Large uncertainty covering both locations
 
@@ -133,7 +139,7 @@ def main():
     print(f"  True robot position: ({true_x:.1f}, {true_y:.1f})")
     print(f"  Symmetric position:  ({symmetric_x:.1f}, {symmetric_y:.1f})")
     print(f"  EKF initial mean:    ({ekf_init_x:.1f}, {ekf_init_y:.1f})")
-    print(f"  PF: 250 particles at each location\n")
+    print(f"  PF: {half} particles at each location\n")
 
     # Set robot at TRUE position
     x, y, theta = true_x, true_y, true_theta
@@ -171,34 +177,42 @@ def main():
         wp_x, wp_y = waypoints[current_wp]
         dx_to_goal = wp_x - x
         dy_to_goal = wp_y - y
-        target_theta = np.arctan2(dy_to_goal, dx_to_goal)
-        dtheta = (target_theta - theta + np.pi) % (2*np.pi) - np.pi
+        target_theta = atan2(dy_to_goal, dx_to_goal)
+        dtheta = wrap_angle(target_theta - theta)
 
         # Execute motion
         if abs(dtheta) < 0.3:
-            dist = np.sqrt(dx_to_goal**2 + dy_to_goal**2)
+            dist = hypot(dx_to_goal, dy_to_goal)
             step_val = min(dist, linear_speed)
-            x += step_val * np.cos(theta)
-            y += step_val * np.sin(theta)
+            x += step_val * cos(theta)
+            y += step_val * sin(theta)
 
         theta += np.clip(dtheta, -angular_speed, +angular_speed)
-        theta = (theta + np.pi) % (2*np.pi) - np.pi
+        theta = wrap_angle(theta)
         
         set_base_link_pose(pr2, x, y, theta)
 
         # Check waypoint
-        if np.hypot(wp_x - x, wp_y - y) < wp_threshold:
+        if hypot(wp_x - x, wp_y - y) < wp_threshold:
             current_wp = (current_wp + 1) % len(waypoints)
 
-        # Compute odometry
-        actual_dx = x - x_prev
-        actual_dy = y - y_prev
-        actual_dtheta = theta - theta_prev
-        actual_dtheta = (actual_dtheta + np.pi) % (2*np.pi) - np.pi
+        # ========== CORRECTED ODOMETRY CALCULATION ==========
+        # Compute odometry in LOCAL frame
+        dx_global = x - x_prev
+        dy_global = y - y_prev
+        dtheta = wrap_angle(theta - theta_prev)
         
-        # Update both filters
-        pf.motion_update((actual_dx, actual_dy, actual_dtheta))
-        ekf.motion_update((actual_dx, actual_dy, actual_dtheta))
+        # CRITICAL FIX: Transform global displacement to robot's LOCAL frame 
+        # using PREVIOUS orientation
+        cos_prev = cos(theta_prev)
+        sin_prev = sin(theta_prev)
+        dx_local = cos_prev * dx_global + sin_prev * dy_global
+        dy_local = -sin_prev * dx_global + cos_prev * dy_global
+        
+        # Update both filters with local frame odometry
+        pf.motion_update((dx_local, dy_local, dtheta))
+        ekf.motion_update((dx_local, dy_local, dtheta))
+        # ====================================================
 
         # LiDAR and measurement update
         ranges, angles, _ = create_lidar_scan(pr2, link_name)
@@ -207,9 +221,9 @@ def main():
         pf.measurement_update(ranges, angles)
         ekf.measurement_update(ranges, angles)
 
-        # Resample PF
+        # Resample PF with adjusted threshold
         ess = pf.effective_sample_size()
-        if ess < 0.5 * pf.n_particles:
+        if ess < 0.3 * pf.n_particles:  # Changed from 0.5
             pf.resample()
 
         # Get estimates
@@ -242,10 +256,8 @@ def main():
         true_theta_actual = p.getEulerFromQuaternion(link_pose[1])[2]
         
         # Calculate errors
-        pf_pos_error = np.sqrt((pf_est[0] - true_x_actual)**2 + 
-                               (pf_est[1] - true_y_actual)**2)
-        ekf_pos_error = np.sqrt((ekf_est[0] - true_x_actual)**2 + 
-                                (ekf_est[1] - true_y_actual)**2)
+        pf_pos_error = hypot(pf_est[0] - true_x_actual, pf_est[1] - true_y_actual)
+        ekf_pos_error = hypot(ekf_est[0] - true_x_actual, ekf_est[1] - true_y_actual)
         
         if step_num % 10 == 0:
             print(f"Step {step_num:3d}:")

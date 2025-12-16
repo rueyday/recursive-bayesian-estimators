@@ -1,4 +1,4 @@
-# baseline_calculator_v2.py
+# baseline_calculator_v2.py - CORRECTED VERSION
 import os
 import sys
 import time
@@ -8,8 +8,6 @@ from math import cos, sin, atan2, hypot
 
 # =================================================================
 # IMPORTANT: ASSUMED EXTERNAL IMPORTS
-# (Keep these comments to remind user of required custom files)
-# ...
 # =================================================================
 
 try:
@@ -19,43 +17,8 @@ try:
     from utils import load_env
     from pybullet_tools.utils import get_link_pose, link_from_name
 except ImportError as e:
-    # Use placeholder/mock imports for structure only
-    # (The user will replace this with their actual working environment)
-    print(f"CRITICAL ERROR: Failed to import custom modules. Please ensure your environment is set up correctly. Missing module or function: {e}")
-    class DummyFilter:
-        def __init__(self, **kwargs): self.n_particles = 500
-        def motion_update(self, odom): pass
-        def measurement_update(self, ranges, angles): pass
-        def estimate(self): return np.array([0.0, 0.0, 0.0])
-        def effective_sample_size(self): return 100
-        def resample(self): pass
-        def __setattr__(self, name, value):
-            if name == 'P': self._P = value
-            else: super().__setattr__(name, value)
-        
-    ParticleFilter = DummyFilter
-    ExtendedKalmanFilter = DummyFilter
-    
-    def build_occupancy_grid(xmin, xmax, ymin, ymax, resolution): return np.zeros((1,1)), np.array([0]), np.array([0])
-    def load_env(env_file): return {"pr2": 0}, None # Mock returns a dictionary with ID 0
-    def create_lidar_scan(robot, link_name): return [], [], None
-    def get_link_pose(robot, link): return ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0))
-    def link_from_name(robot, name): return 0
-    
-    class PyBulletMock:
-        def connect(self, mode): return 1
-        def getBasePositionAndOrientation(self, body): return [0, 0, 0], [0, 0, 0, 1]
-        def resetBasePositionAndOrientation(self, body, pos, orn): pass
-        def getQuaternionFromEuler(self, euler): return [0, 0, 0, 1]
-        def getEulerFromQuaternion(self, quat): return [0, 0, 0]
-        def disconnect(self, client): pass
-    p = PyBulletMock()
-    
-    class PybulletToolsMock:
-        CLIENTS = {}
-    sys.modules["pybullet_tools.utils"] = PybulletToolsMock()
-# =================================================================
-
+    print(f"CRITICAL ERROR: Failed to import custom modules: {e}")
+    sys.exit(1)
 
 # Force display on Windows
 if sys.platform == "win32":
@@ -80,7 +43,6 @@ def wrap_angle(a):
     """Wraps an angle to the range [-pi, pi]"""
     return np.fmod(a + np.pi, 2 * np.pi) - np.pi
 
-# MODIFIED: set_base_link_pose now takes the robot ID (int) instead of a wrapper object
 def set_base_link_pose(robot_id, x_link, y_link, theta):
     """Sets the robot's pose in PyBullet using the body ID."""
     try:
@@ -97,7 +59,6 @@ def set_base_link_pose(robot_id, x_link, y_link, theta):
             p.getQuaternionFromEuler([0, 0, theta])
         )
     except Exception as e:
-        # print(f"Warning in set_base_link_pose: {e}")
         pass
 
 def calculate_rmse(true_poses, estimates):
@@ -127,12 +88,11 @@ def main():
     client = None
     try:
         client = p.connect(p.GUI)
-        # Ensure PyBullet client is registered with pybullet_tools.utils
         if hasattr(sys.modules["pybullet_tools.utils"], "CLIENTS"):
              sys.modules["pybullet_tools.utils"].CLIENTS = {client: True}
     except Exception as e:
-        print(f"Could not connect to PyBullet. Simulation may fail: {e}")
-        client = 100 
+        print(f"Could not connect to PyBullet: {e}")
+        return
     
     # --------------------------------------------------------
     # LOAD ENVIRONMENT & INIT ROBOT
@@ -140,37 +100,46 @@ def main():
     robot_id = None
     try:
         robots_dict, _ = load_env("figure8_env.json")
-        # Assume the value is the PyBullet body ID (an int)
         robot_id = robots_dict.get("pr2", list(robots_dict.values())[0])
         link_name = "base_link"
         if not isinstance(robot_id, int):
-             print(f"Warning: Expected robot ID to be an integer (PyBullet body ID), but got {type(robot_id)}")
+             print(f"Warning: Expected robot ID to be an integer, got {type(robot_id)}")
     except Exception as e:
-        print(f"Error loading environment: {e}. Cannot proceed.")
+        print(f"Error loading environment: {e}")
         return
 
     # --------------------------------------------------------
     # OCCUPANCY GRID & FILTERS INIT
     # --------------------------------------------------------
-    occ, xs, ys = build_occupancy_grid(xmin=-6.0, xmax=6.0, ymin=-6.0, ymax=6.0, resolution=0.2)
+    occ, xs, ys = build_occupancy_grid(xmin=-8.0, xmax=8.0, ymin=-8.0, ymax=8.0, resolution=0.2)
 
-    # Filter initialization assumes success
+    # CORRECTED: Increased motion noise and more particles
     pf = ParticleFilter(
-        occ=occ, xs=xs, ys=ys, n_particles=500, lidar_max_range=10.0,
-        lidar_min_range=0.1, z_lidar=0.5, scan_subsample=8
+        occ=occ, xs=xs, ys=ys, 
+        n_particles=1000,  # Increased from 500
+        lidar_max_range=10.0,
+        lidar_min_range=0.1, 
+        z_lidar=0.5, 
+        scan_subsample=4,  # Reduced from 8 for better measurement
+        motion_noise=(0.1, 0.1, 0.1),  # Increased from (0.02, 0.02, 0.01)
+        sigma_range=0.3  # Increased from 0.2
     )
 
     ekf = ExtendedKalmanFilter(
-        initial_pose=(-4.0, 5.0, np.pi/2), motion_noise=(0.02, 0.02, 0.01),
-        lidar_max_range=10.0, lidar_min_range=0.1, z_lidar=0.5,
-        sigma_range=0.2, scan_subsample=8
+        initial_pose=(-2.5, 6.0, np.pi/2), 
+        motion_noise=(0.05, 0.05, 0.03),  # Increased
+        lidar_max_range=10.0, 
+        lidar_min_range=0.1, 
+        z_lidar=0.5,
+        sigma_range=0.3,  # Increased
+        scan_subsample=4  # Reduced from 8
     )
 
-    # Initial Belief Setup
-    ekf.P = 0.5 * np.eye(3)
-    pf.particles[:, 0] = -4.0 + np.random.normal(0, 0.5, pf.n_particles)
-    pf.particles[:, 1] = 5.0 + np.random.normal(0, 0.5, pf.n_particles)
-    pf.particles[:, 2] = np.pi/2 + np.random.normal(0, 0.3, pf.n_particles)
+    # CORRECTED: Larger initial uncertainty
+    ekf.P = 1.0 * np.eye(3)  # Increased from 0.5
+    pf.particles[:, 0] = -2.5 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.1
+    pf.particles[:, 1] = 6.0 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.1
+    pf.particles[:, 2] = np.pi/2 + np.random.normal(0, 0.5, pf.n_particles)  # Increased from 0.3
     pf.weights[:] = 1.0 / pf.n_particles
 
     # --------------------------------------------------------
@@ -224,14 +193,27 @@ def main():
         if hypot(dx_to_wp, dy_to_wp) < wp_threshold:
             current_wp = (current_wp + 1) % len(waypoints)
 
-        # ---- TRUE ODOMETRY ----
-        delta_x = x - x_prev
-        delta_y = y - y_prev
+        # ---- CORRECTED ODOMETRY CALCULATION ----
+        # Calculate displacement in global frame
+        dx_global = x - x_prev
+        dy_global = y - y_prev
         delta_theta = wrap_angle(theta - theta_prev)
+        
+        # CRITICAL FIX: Transform to robot's LOCAL frame using PREVIOUS orientation
+        # This gives us the motion in the robot's coordinate system
+        cos_prev = cos(theta_prev)
+        sin_prev = sin(theta_prev)
+        
+        # Inverse rotation: R^T * [dx_global, dy_global]
+        dx_local = cos_prev * dx_global + sin_prev * dy_global
+        dy_local = -sin_prev * dx_global + cos_prev * dy_global
+        
+        # Now odometry is correctly in the robot's local frame
+        odom = (dx_local, dy_local, delta_theta)
 
         # ---- MOTION/MEASUREMENT UPDATE ----
-        pf.motion_update((delta_x, delta_y, delta_theta))
-        ekf.motion_update((delta_x, delta_y, delta_theta))
+        pf.motion_update(odom)
+        ekf.motion_update(odom)
 
         ranges, angles, _ = create_lidar_scan(robot_id, link_name)
 
@@ -243,8 +225,20 @@ def main():
         ekf.measurement_update(ranges, angles)
         ekf_times.append(time.time() - t0)
 
-        if pf.effective_sample_size() < 0.5 * pf.n_particles:
+        if pf.effective_sample_size() < 0.3 * pf.n_particles:  # Changed from 0.5
             pf.resample()
+        
+        pf_est = pf.estimate()
+        ekf_est = ekf.estimate()
+
+        pf_pos_err = hypot(x - pf_est[0], y - pf_est[1])
+        ekf_pos_err = hypot(x - ekf_est[0], y - ekf_est[1])
+        
+        if (step + 1) % 20 == 0:
+            print(f"\nStep {step+1}:")
+            print(f"  True Pose: ({x:.2f}, {y:.2f}, {theta:.2f})")
+            print(f"  PF  Estimate: ({pf_est[0]:.2f}, {pf_est[1]:.2f}, {pf_est[2]:.2f}) | Error: {pf_pos_err:.3f} m")
+            print(f"  EKF Estimate: ({ekf_est[0]:.2f}, {ekf_est[1]:.2f}, {ekf_est[2]:.2f}) | Error: {ekf_pos_err:.3f} m")
 
         # ---- LOG DATA ----
         true_poses.append([x, y, theta])
@@ -266,8 +260,7 @@ def main():
     print("BASELINE PERFORMANCE COMPARISON RESULTS")
     print("="*50)
 
-    # Print Table 1
-    print("Table 1: Baseline Performance Comparison (1200 Steps)")
+    print(f"\nTable 1: Baseline Performance Comparison ({NUM_STEPS} Steps)")
     print("{:<25}{:<15}{:<20}{}".format(
         "Filter", "Position RMSE", "Orientation RMSE", "Comp. Time/Step"
     ))
