@@ -1,10 +1,6 @@
 import numpy as np
 import time
 
-# ============================================================
-# UTILS
-# ============================================================
-
 def wrap_angle(angle):
     return (angle + np.pi) % (2 * np.pi) - np.pi
 
@@ -43,11 +39,6 @@ def count_divergences(position_errors, threshold=2.0, duration=10):
             streak = 0
 
     return count
-
-
-# ============================================================
-# MAIN EVALUATION FUNCTION
-# ============================================================
 
 def evaluate_filter_performance(
     true_poses,

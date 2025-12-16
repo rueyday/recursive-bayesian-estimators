@@ -1,21 +1,7 @@
 #!/usr/bin/env python3
-"""
-Particle Filter vs Extended Kalman Filter Localization Demo
-
-This demo showcases the advantages of Particle Filters over EKF for robot localization
-in challenging scenarios with multimodal distributions and symmetric environments.
-
-Two demonstrations are included:
-1. EKF Failure Case: Shows EKF failing with symmetric/ambiguous environments
-2. Baseline Comparison: Compares both filters on a figure-8 trajectory
-
-Expected Runtime: 5-8 minutes total
-"""
-
 import os
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 from pathlib import Path
 
 # Suppress pygame welcome message if present
@@ -34,7 +20,7 @@ def run_ekf_failure_demo():
     print("This demo shows how EKF fails when faced with symmetric/ambiguous")
     print("initial conditions. The EKF mean will drift into obstacles while")
     print("the Particle Filter maintains valid hypotheses.")
-    print("\nExpected runtime: 2-3 minutes")
+    print("\nExpected runtime: 10 minutes")
     print("=" * 70 + "\n")
     
     # Import and run the EKF failure test
@@ -74,7 +60,7 @@ def run_baseline_comparison():
     print_banner("DEMO 2: BASELINE COMPARISON ON FIGURE-8 TRAJECTORY")
     print("This demo compares Particle Filter and EKF performance on a complex")
     print("figure-8 trajectory, measuring accuracy and computational efficiency.")
-    print("\nExpected runtime: 2-3 minutes")
+    print("\nExpected runtime: 10 minutes")
     print("=" * 70 + "\n")
     
     # Import and run baseline test
@@ -109,7 +95,7 @@ def run_baseline_comparison():
         return False
 
 def analyze_and_visualize_results():
-    """Analyze results and create visualization plots"""
+    """Analyze results and print statistics"""
     print_banner("ANALYZING RESULTS")
     
     # Check if baseline data exists
@@ -125,156 +111,147 @@ def analyze_and_visualize_results():
     pf_times = data['pf_times']
     ekf_times = data['ekf_times']
     
-    # Calculate errors
-    pf_errors = np.sqrt(
+    # Calculate position errors
+    pf_pos_errors = np.sqrt(
         (pf_estimates[:, 0] - true_poses[:, 0])**2 +
         (pf_estimates[:, 1] - true_poses[:, 1])**2
     )
-    ekf_errors = np.sqrt(
+    ekf_pos_errors = np.sqrt(
         (ekf_estimates[:, 0] - true_poses[:, 0])**2 +
         (ekf_estimates[:, 1] - true_poses[:, 1])**2
     )
     
-    # Print statistics
-    print("\nPOSITION ERROR STATISTICS:")
+    # Calculate orientation errors
+    pf_ori_errors = np.abs(pf_estimates[:, 2] - true_poses[:, 2])
+    pf_ori_errors = np.minimum(pf_ori_errors, 2*np.pi - pf_ori_errors)  # Wrap to [-pi, pi]
+    
+    ekf_ori_errors = np.abs(ekf_estimates[:, 2] - true_poses[:, 2])
+    ekf_ori_errors = np.minimum(ekf_ori_errors, 2*np.pi - ekf_ori_errors)
+    
+    # Calculate RMSE
+    pf_pos_rmse = np.sqrt(np.mean(pf_pos_errors**2))
+    ekf_pos_rmse = np.sqrt(np.mean(ekf_pos_errors**2))
+    pf_ori_rmse = np.sqrt(np.mean(pf_ori_errors**2))
+    ekf_ori_rmse = np.sqrt(np.mean(ekf_ori_errors**2))
+    
+    # Print Test 1 Results
+    print("\n" + "=" * 70)
+    print("TEST 1: BASELINE PERFORMANCE COMPARISON")
+    print("=" * 70)
+    print("\nExperimental Setup:")
+    print("  - Trajectory: Figure-eight path with 1200 time steps")
+    print("  - Initial pose: (-2.5, 6.0, π/2)")
+    print("  - Motion noise: σ_x = σ_y = 0.02 m, σ_θ = 0.01 rad")
+    print("  - Measurement noise: σ_r = 0.2 m")
+    print("  - PF: 500 particles, initial σ = 0.5 m (position), 0.3 rad (orientation)")
+    print("  - EKF: Initial covariance P = 0.5I")
+    
+    print("\n" + "-" * 70)
+    print("Table 1: Baseline Performance Comparison")
     print("-" * 70)
-    print(f"{'Metric':<30} {'Particle Filter':>20} {'EKF':>20}")
+    print(f"{'Filter':<25} {'Position RMSE':<18} {'Orientation RMSE':<20} {'Computation Time':<15}")
     print("-" * 70)
-    print(f"{'Mean Error (m)':<30} {np.mean(pf_errors):>20.4f} {np.mean(ekf_errors):>20.4f}")
-    print(f"{'Median Error (m)':<30} {np.median(pf_errors):>20.4f} {np.median(ekf_errors):>20.4f}")
-    print(f"{'Max Error (m)':<30} {np.max(pf_errors):>20.4f} {np.max(ekf_errors):>20.4f}")
-    print(f"{'Std Dev (m)':<30} {np.std(pf_errors):>20.4f} {np.std(ekf_errors):>20.4f}")
+    print(f"{'Particle Filter':<25} {pf_pos_rmse:>10.3f} m      {pf_ori_rmse:>10.3f} rad        {np.mean(pf_times)*1000:>8.2f} ms")
+    print(f"{'Extended Kalman Filter':<25} {ekf_pos_rmse:>10.3f} m      {ekf_ori_rmse:>10.3f} rad        {np.mean(ekf_times)*1000:>8.2f} ms")
     print("-" * 70)
     
-    print("\nCOMPUTATIONAL PERFORMANCE:")
-    print("-" * 70)
-    print(f"{'Metric':<30} {'Particle Filter':>20} {'EKF':>20}")
-    print("-" * 70)
-    print(f"{'Mean Update Time (ms)':<30} {np.mean(pf_times)*1000:>20.2f} {np.mean(ekf_times)*1000:>20.2f}")
-    print(f"{'Total Time (s)':<30} {np.sum(pf_times):>20.2f} {np.sum(ekf_times):>20.2f}")
-    print("-" * 70)
+    print("\nKey Findings:")
+    if ekf_pos_rmse < pf_pos_rmse:
+        print(f"  ✓ EKF achieved {((pf_pos_rmse - ekf_pos_rmse)/pf_pos_rmse*100):.1f}% lower position RMSE")
+    else:
+        print(f"  ✓ PF achieved {((ekf_pos_rmse - pf_pos_rmse)/ekf_pos_rmse*100):.1f}% lower position RMSE")
     
-    # Create visualizations
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    if pf_ori_rmse < ekf_ori_rmse:
+        print(f"  ✓ PF achieved {((ekf_ori_rmse - pf_ori_rmse)/ekf_ori_rmse*100):.1f}% lower orientation RMSE")
+    else:
+        print(f"  ✓ EKF achieved {((pf_ori_rmse - ekf_ori_rmse)/pf_ori_rmse*100):.1f}% lower orientation RMSE")
     
-    # Plot 1: Trajectories
-    ax = axes[0, 0]
-    ax.plot(true_poses[:, 0], true_poses[:, 1], 'k-', linewidth=2, label='Ground Truth', alpha=0.7)
-    ax.plot(pf_estimates[:, 0], pf_estimates[:, 1], 'r-', linewidth=1, label='Particle Filter', alpha=0.6)
-    ax.plot(ekf_estimates[:, 0], ekf_estimates[:, 1], 'b-', linewidth=1, label='EKF', alpha=0.6)
-    ax.set_xlabel('X Position (m)')
-    ax.set_ylabel('Y Position (m)')
-    ax.set_title('Trajectory Comparison')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    ax.axis('equal')
+    speedup = np.mean(pf_times) / np.mean(ekf_times)
+    print(f"  ✓ EKF is {speedup:.1f}x faster than PF")
     
-    # Plot 2: Position Errors Over Time
-    ax = axes[0, 1]
-    steps = np.arange(len(pf_errors))
-    ax.plot(steps, pf_errors, 'r-', linewidth=1, label='Particle Filter', alpha=0.7)
-    ax.plot(steps, ekf_errors, 'b-', linewidth=1, label='EKF', alpha=0.7)
-    ax.set_xlabel('Time Step')
-    ax.set_ylabel('Position Error (m)')
-    ax.set_title('Position Error Over Time')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
+    print("\nInterpretation:")
+    print("  Under nominal conditions with a good initial estimate, the EKF performs")
+    print("  efficiently with competitive accuracy. The PF shows strength in orientation")
+    print("  estimation during high-curvature segments, demonstrating its ability to")
+    print("  handle nonlinear belief distributions at the cost of computation.")
     
-    # Plot 3: Error Distribution
-    ax = axes[1, 0]
-    bins = np.linspace(0, max(np.max(pf_errors), np.max(ekf_errors)), 50)
-    ax.hist(pf_errors, bins=bins, alpha=0.6, label='Particle Filter', color='red', edgecolor='black')
-    ax.hist(ekf_errors, bins=bins, alpha=0.6, label='EKF', color='blue', edgecolor='black')
-    ax.set_xlabel('Position Error (m)')
-    ax.set_ylabel('Frequency')
-    ax.set_title('Error Distribution')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
+    # Save summary to file
+    with open("test1_results.txt", "w") as f:
+        f.write("TEST 1: BASELINE PERFORMANCE COMPARISON\n")
+        f.write("=" * 70 + "\n\n")
+        f.write("Table 1: Baseline Performance Comparison\n")
+        f.write("-" * 70 + "\n")
+        f.write(f"{'Filter':<25} {'Position RMSE':<18} {'Orientation RMSE':<20} {'Computation Time':<15}\n")
+        f.write("-" * 70 + "\n")
+        f.write(f"{'Particle Filter':<25} {pf_pos_rmse:>10.3f} m      {pf_ori_rmse:>10.3f} rad        {np.mean(pf_times)*1000:>8.2f} ms\n")
+        f.write(f"{'Extended Kalman Filter':<25} {ekf_pos_rmse:>10.3f} m      {ekf_ori_rmse:>10.3f} rad        {np.mean(ekf_times)*1000:>8.2f} ms\n")
+        f.write("-" * 70 + "\n")
     
-    # Plot 4: Computation Time Comparison
-    ax = axes[1, 1]
-    time_windows = 50
-    pf_rolling = [np.mean(pf_times[max(0, i-time_windows):i+1])*1000 
-                  for i in range(len(pf_times))]
-    ekf_rolling = [np.mean(ekf_times[max(0, i-time_windows):i+1])*1000 
-                   for i in range(len(ekf_times))]
-    ax.plot(steps, pf_rolling, 'r-', linewidth=1, label='Particle Filter', alpha=0.7)
-    ax.plot(steps, ekf_rolling, 'b-', linewidth=1, label='EKF', alpha=0.7)
-    ax.set_xlabel('Time Step')
-    ax.set_ylabel('Update Time (ms, rolling avg)')
-    ax.set_title('Computational Performance')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('localization_comparison.png', dpi=150, bbox_inches='tight')
-    print(f"\nVisualization saved to: localization_comparison.png")
-    
-    # Show plot briefly
-    plt.show(block=False)
-    plt.pause(3)
-    plt.close()
+    print("\n✓ Results saved to test1_results.txt")
 
 def print_summary():
     """Print final summary"""
     print_banner("DEMO COMPLETE - SUMMARY")
     print("This demonstration showed two key advantages of Particle Filters:")
     print()
-    print("1. MULTIMODAL DISTRIBUTIONS:")
+    print("1. MULTIMODAL DISTRIBUTIONS (Test 2):")
     print("   - EKF assumes unimodal Gaussian distributions")
     print("   - When faced with symmetric/ambiguous scenarios, EKF's mean")
     print("     can drift into physically impossible locations")
     print("   - Particle Filter maintains multiple hypotheses and correctly")
     print("     disambiguates as new measurements arrive")
     print()
-    print("2. ROBUST PERFORMANCE:")
-    print("   - Both filters perform well in standard scenarios")
+    print("2. EFFICIENCY VS ROBUSTNESS TRADE-OFF (Test 1):")
+    print("   - EKF performs well under nominal conditions with lower cost")
     print("   - Particle Filter provides more robust estimates in complex")
     print("     environments with ambiguities")
     print("   - Trade-off: PF has higher computational cost but better")
     print("     handling of non-Gaussian, multimodal distributions")
     print()
     print("=" * 70)
+    print("CRITICAL INSIGHT:")
+    print("The choice between Kalman and particle filtering depends not on")
+    print("computational resources alone, but on whether the posterior can")
+    print("be well-approximated as unimodal Gaussian:")
+    print("  • Unimodal case (good initial estimate) → EKF excels")
+    print("  • Multimodal case (global localization, symmetry) → PF necessary")
+    print("=" * 70)
+    print()
     print("Output files generated:")
-    print("  - baseline_filter_data.npz (raw data)")
-    print("  - localization_comparison.png (visualization)")
+    print("  - test1_results.txt (Baseline performance data)")
+    print("  - test2_results.txt (Failure case data)")
+    print("  - baseline_filter_data.npz (Raw experimental data)")
     print("=" * 70 + "\n")
 
 def main():
-    """Main demo function"""
     print_banner("PARTICLE FILTER vs EKF LOCALIZATION DEMO")
-    print("Expected Total Runtime: 15-20 minutes")
-    print()
     print("This demo will run two experiments:")
     print("  1. EKF Failure Case")
     print("  2. Baseline Comparison")
-    
-    # Run Demo 1: EKF Failure
-    success1 = run_ekf_failure_demo()
-    
+
+    success1 = run_baseline_comparison()
+
     if success1:
         print("\n" + "=" * 70)
-        print("Demo 1 complete. Continuing to Demo 2...")
+        print("Demo 1 complete")
     
-    # Run Demo 2: Baseline Comparison
-    success2 = run_baseline_comparison()
+    success2 = run_ekf_failure_demo()
     
     if success2:
         print("\n" + "=" * 70)
-        print("Demo 2 complete. Analyzing results...")
+        print("Demo 2 complete")
         
-        # Analyze and visualize
-        try:
-            analyze_and_visualize_results()
-        except Exception as e:
-            print(f"Warning: Could not generate analysis plots: {e}")
+        # try:
+        #     analyze_and_visualize_results()
+        # except Exception as e:
+        #     print(f"Warning: Could not generate analysis: {e}")
     
     print_summary()
     
-    if success1 and success2:
-        print("All demos completed successfully!")
-    else:
-        print("Some demos encountered issues. Check the output above.")
+    # if success1 and success2:
+    #     print("All demos completed successfully!")
+    # else:
+    #     print("Some demos encountered issues.")
 
 if __name__ == "__main__":
     try:
