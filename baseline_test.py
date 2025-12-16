@@ -275,14 +275,14 @@ def main():
     print("="*50)
 
     print(f"\nTable 1: Baseline Performance Comparison ({NUM_STEPS} Steps)")
-    print("{:<25}{:<15}{:<20}{}".format(
+    print("{:<25}{:<20}{}".format(
         "Filter", "Position RMSE", "Comp. Time/Step"
     ))
     print("-" * 75)
-    print("{:<25}{:<15.3f}{:<20.3f}{:.2f} ms".format(
+    print("{:<25}{:<20.3f}{:.2f} ms".format(
         "Particle Filter", pf_pos_rmse, avg_pf_time_ms
     ))
-    print("{:<25}{:<15.3f}{:<20.3f}{:.2f} ms".format(
+    print("{:<25}{:<20.3f}{:.2f} ms".format(
         "Extended Kalman Filter", ekf_pos_rmse, avg_ekf_time_ms
     ))
     print("="*50)
