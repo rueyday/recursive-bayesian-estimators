@@ -155,7 +155,6 @@ def main():
 
     print("=" * 70)
     print("Starting motion... Watch for:")
-    print("  - RED arrow = PF estimate (should track correctly)")
     print("  - BLUE arrow = EKF estimate (may go into walls)")
     print("  - GREEN dots = PF particles (watch clusters separate)")
     print("=" * 70 + "\n")
@@ -227,7 +226,7 @@ def main():
             pf.resample()
 
         # Get estimates
-        pf_est = pf.estimate()
+        pf_est = pf.estimate_map()
         ekf_est = ekf.estimate()
 
         # Check if EKF is in obstacle
