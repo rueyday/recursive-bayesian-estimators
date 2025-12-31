@@ -1,5 +1,5 @@
 import numpy as np
-from utils import get_collision_fn_PR2, load_env, execute_trajectory, draw_sphere_marker
+from utils.utils import get_collision_fn_PR2, load_env, execute_trajectory, draw_sphere_marker
 import pybullet_tools.utils
 from pybullet_tools.utils import disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
 from pybullet_tools.pr2_utils import PR2_GROUPS

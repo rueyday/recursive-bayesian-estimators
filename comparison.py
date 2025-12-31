@@ -1,4 +1,3 @@
-# baseline_calculator_COMPLETE_FIX.py
 import os
 import sys
 import time
@@ -11,10 +10,10 @@ from math import cos, sin, atan2, hypot
 # =================================================================
 
 try:
-    from lidar_utils import create_lidar_scan, visualize_lidar
-    from particle_model import ParticleFilter, build_occupancy_grid
-    from kalman_model import ExtendedKalmanFilter
-    from utils import load_env
+    from utils.lidar_utils import create_lidar_scan, visualize_lidar
+    from filters.particle_model import ParticleFilter, build_occupancy_grid
+    from filters.kalman_model import ExtendedKalmanFilter
+    from utils.utils import load_env
     from pybullet_tools.utils import get_link_pose, link_from_name
 except ImportError as e:
     print(f"CRITICAL ERROR: Failed to import custom modules: {e}")

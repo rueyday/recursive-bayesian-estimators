@@ -1,0 +1,141 @@
+### General ###
+.DS_Store
+Thumbs.db
+
+### Backup files ###
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+
+### Compiled files ###
+*.o
+*.so
+*.a
+*.out
+*.exe
+
+### Build directories ###
+build/
+Build/
+dist/
+Debug/
+Release/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+*.dSYM/
+
+### Python ###
+__pycache__/
+*.pyc
+*.pyo
+
+### C++ ###
+*.obj
+*.dll
+*.lib
+
+### Visual Studio Code ###
+.vscode/
+
+### MacOS ###
+.DS_Store
+
+### Node.js ###
+node_modules/
+npm-debug.log
+
+### ROS 2 ###
+install/
+log/
+build/
+
+### JetBrains (IntelliJ, CLion, etc.) ###
+.idea/
+
+### System Files ###
+Desktop.ini
+
+### Logs ###
+logs/
+*.log
+
+### Temporary files ###
+*.tmp
+*.cache
+
+### Archives ###
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+### Other Editors ###
+*.sublime-project
+*.sublime-workspace
+
+### Generated Files ###
+doxygen-docs/
+
+### Temporary Dev Files ###
+*.orig
+*.rej
+
+### Anaconda ###
+env/
+.conda/
+*.ipynb_checkpoints/
+
+### Matlab ###
+*.mex*
+
+### Coverage ###
+.coverage
+coverage/
+
+### Linux ###
+*.lock
+
+### Temporary build files ###
+*.cmake
+CMakeLists.txt.user
+
+### Python environments ###
+.env/
+.venv/
+
+### Rust ###
+target/
+Cargo.lock
+
+### Go ###
+bin/
+
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+
+### Temporary Dev Files ###
+*.bak
+*.tmp
+*.swp
+*.swo
+
+### LaTeX ###
+*.aux
+*.log
+*.toc
+*.synctex.gz
+
+### VS Code Extensions ###
+.history/
+
+### Emacs ###
+*~
+
+### Gedit ###
+*.gedit-swp
