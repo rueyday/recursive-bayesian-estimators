@@ -2,8 +2,8 @@ import numpy as np
 import json
 import pybullet as p
 from pybullet_tools.parse_json import parse_robot, parse_body
-# from pybullet_tools.utils import set_joint_positions, \
-#     wait_if_gui, wait_for_duration, get_collision_fn
+from pybullet_tools.utils import disconnect, get_joint_positions, wait_if_gui, set_joint_positions, joint_from_name, get_link_pose, link_from_name
+# from pybullet_tools.utils import wait_for_duration, get_collision_fn
 # from pybullet_tools.pr2_utils import get_disabled_collisions
 
 def load_env(env_file):
@@ -14,15 +14,11 @@ def load_env(env_file):
     bodies = {body['name']: parse_body(body) for body in env_json['bodies']}
     return robots, bodies
 
-# ---------- Occupancy grid builder ----------
+# Occupancy grid builder
 def build_occupancy_grid(xmin, xmax, ymin, ymax, resolution,
                          z_top=3.0, z_bottom=-1.0,
                          height_threshold=0.1):
     """
-    Build a 2D occupancy grid by casting vertical rays from z_top to z_bottom
-    at every grid cell center. If a hit exists within the vertical segment,
-    mark cell occupied.
-    Returns:
         occ: 2D numpy array (ny, nx). 1=occupied, 0=free
         xs, ys: 1D arrays of cell centers (x, y)
     """
@@ -57,6 +53,83 @@ def build_occupancy_grid(xmin, xmax, ymin, ymax, resolution,
             idx += 1
     return occ, xs, ys
 
+def create_lidar_scan(robot, link_name, num_rays=360, max_range=10.0, min_range=0.1):
+    """
+        robot: PyBullet robot body ID
+        link_name: Name of link to attach lidar to (e.g., 'head_tilt_link')
+        num_rays: Number of rays in the scan
+        max_range: Maximum detection range in meters
+        min_range: Minimum detection range in meters
+    
+    Returns:
+        ranges: Array of range measurements
+        angles: Array of angles for each ray
+        hit_positions: 3D positions of ray hits
+    """
+    link_id = link_from_name(robot, link_name)
+    link_pose = get_link_pose(robot, link_id)
+    position, orientation = link_pose
+    
+    rot_matrix = p.getMatrixFromQuaternion(orientation)
+    rot_matrix = np.array(rot_matrix).reshape(3, 3)
+    
+    ranges = []
+    angles = []
+    hit_positions = []
+    
+    # Create rays in a circle
+    for i in range(num_rays):
+        angle = 2 * np.pi * i / num_rays
+        angles.append(angle)
+        
+        local_direction = np.array([np.cos(angle), np.sin(angle), 0])
+        world_direction = rot_matrix @ local_direction
+        
+        ray_from = position
+        ray_to = tuple(np.array(position) + world_direction * max_range)
+        
+        # Perform raycast
+        result = p.rayTest(ray_from, ray_to)
+        
+        if result[0][0] != -1:  # Hit something
+            hit_fraction = result[0][2]
+            hit_pos = result[0][3]
+            distance = hit_fraction * max_range
+            
+            if distance >= min_range:
+                ranges.append(distance)
+                hit_positions.append(hit_pos)
+            else:
+                ranges.append(max_range)  # Out of range
+                hit_positions.append(None)
+        else:
+            ranges.append(max_range)
+            hit_positions.append(None)
+    
+    return np.array(ranges), np.array(angles), hit_positions
+
+def visualize_lidar(ranges, angles, robot, link_name, color=(1, 0, 0), max_point_dist=10.0, life_time=0.5):
+    link_id = link_from_name(robot, link_name)
+    position, orientation = get_link_pose(robot, link_id)
+    position = np.asarray(position)
+
+    rot_matrix = np.asarray(
+        p.getMatrixFromQuaternion(orientation)
+    ).reshape(3, 3)
+
+    ranges = np.asarray(ranges)
+    angles = np.asarray(angles)
+
+    cos_a = np.cos(angles)
+    sin_a = np.sin(angles)
+
+    local_dirs = np.column_stack((cos_a, sin_a, np.zeros_like(cos_a)))
+    world_dirs = local_dirs @ rot_matrix.T
+    end_points = position + world_dirs * ranges[:, None]
+    
+    for dist, end in zip(ranges, end_points):
+        p.addUserDebugLine(position, end, color, lineWidth=0.1, lifeTime=life_time)
+
 # def get_collision_fn_PR2(robot, joints, obstacles):
 #     # check robot collision with environment
 #     disabled_collisions = get_disabled_collisions(robot)
@@ -78,10 +151,8 @@ def build_occupancy_grid(xmin, xmax, ymin, ymax, resolution,
 #     print('Finished')
 
 # def draw_sphere_marker(position, radius, color):
-#    vs_id = p.createVisualShape(p.GEOM_SPHERE, radius=radius, rgbaColor=color)
-#    marker_id = p.createMultiBody(basePosition=position, baseCollisionShapeIndex=-1, baseVisualShapeIndex=vs_id)
-#    return marker_id
 
+#    return marker_id
 
 # def draw_line(start, end, width, color):
 #     line_id = p.addUserDebugLine(start, end, color, width)

@@ -6,11 +6,10 @@ import pybullet as p
 from math import cos, sin, atan2, hypot
 
 try:
-    from utils import load_env, build_occupancy_grid
+    from utils import load_env, build_occupancy_grid, visualize_lidar, create_lidar_scan
     from pybullet_tools.utils import get_link_pose, link_from_name
     from filters.pf_model import ParticleFilter
-    # from utils.lidar_utils import create_lidar_scan, visualize_lidar
-    # from filters.ekf_model import ExtendedKalmanFilter
+    from filters.ekf_model import ExtendedKalmanFilter
 except ImportError as e:
     print(f"CRITICAL ERROR: Failed to import custom modules: {e}")
     sys.exit(1)
@@ -25,15 +24,15 @@ waypoints = [
     ( 2.5,  6.0), (-2.5,  6.0)
 ]
 
-NUM_STEPS = 300
-# linear_speed = 0.05
-# angular_speed = 0.15
-# wp_threshold = 0.2
+NUM_STEPS = 800
+linear_speed = 0.15
+angular_speed = 0.1
+wp_threshold = 0.2
 
-# HELPERS
-# def wrap_angle(a):
-#     """Wraps an angle to the range [-pi, pi]"""
-#     return np.fmod(a + np.pi, 2 * np.pi) - np.pi
+def wrap_angle(a):
+    """Wraps an angle to the range [-pi, pi]"""
+    return np.fmod(a + np.pi, 2 * np.pi) - np.pi
+
 def set_base_link_pose(robot_id, x_link, y_link, theta):
     try:
         _, _, z = p.getBasePositionAndOrientation(robot_id)[0]
@@ -48,19 +47,19 @@ def set_base_link_pose(robot_id, x_link, y_link, theta):
         )
     except Exception as e:
         pass
-# def calculate_rmse(true_poses, estimates):
-#     """Calculates Position and Orientation RMSE."""
-#     true_poses = np.array(true_poses)
-#     estimates = np.array(estimates)
-#     if len(true_poses) == 0:
-#         return 0.0, 0.0
-#     pos_error = true_poses[:, :2] - estimates[:, :2]
-#     pos_mse = np.mean(np.sum(pos_error**2, axis=1))
-#     pos_rmse = np.sqrt(pos_mse)
-#     theta_error = wrap_angle(true_poses[:, 2] - estimates[:, 2])
-#     theta_mse = np.mean(theta_error**2)
-#     theta_rmse = np.sqrt(theta_mse)
-#     return pos_rmse, theta_rmse
+def calculate_rmse(true_poses, estimates):
+    """Calculates Position and Orientation RMSE."""
+    true_poses = np.array(true_poses)
+    estimates = np.array(estimates)
+    if len(true_poses) == 0:
+        return 0.0, 0.0
+    pos_error = true_poses[:, :2] - estimates[:, :2]
+    pos_mse = np.mean(np.sum(pos_error**2, axis=1))
+    pos_rmse = np.sqrt(pos_mse)
+    theta_error = wrap_angle(true_poses[:, 2] - estimates[:, 2])
+    theta_mse = np.mean(theta_error**2)
+    theta_rmse = np.sqrt(theta_mse)
+    return pos_rmse, theta_rmse
 
 # MAIN SIMULATION AND CALCULATION
 def main():
@@ -87,6 +86,7 @@ def main():
 
     # OCCUPANCY GRID
     occ, xs, ys = build_occupancy_grid(xmin=-8.0, xmax=8.0, ymin=-8.0, ymax=8.0, resolution=0.2)
+    true_id = p.createVisualShape(p.GEOM_SPHERE, radius=0.04, rgbaColor=(0, 1, 0, 1))
     
     # READ BACK ACTUAL POSE
     link_pose = get_link_pose(robot_id, link_from_name(robot_id, link_name))
@@ -107,10 +107,10 @@ def main():
         sigma_range=0.3
     )
     
-    # pf.particles[:, 0] = x + np.random.normal(0, 0.5, pf.n_particles)
-    # pf.particles[:, 1] = y + np.random.normal(0, 0.5, pf.n_particles)
-    # pf.particles[:, 2] = theta + np.random.normal(0, 0.5, pf.n_particles)
-    # pf.weights[:] = 1.0 / pf.n_particles
+    pf.particles[:, 0] = x + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 1] = y + np.random.normal(0, 0.5, pf.n_particles)
+    pf.particles[:, 2] = theta + np.random.normal(0, 0.5, pf.n_particles)
+    pf.weights[:] = 1.0 / pf.n_particles
 
     # # Initialize EKF with ACTUAL pose
     # ekf = ExtendedKalmanFilter(
@@ -125,39 +125,42 @@ def main():
     # ekf.P = 1.0 * np.eye(3)
 
     # DATA LOGS
-    # true_poses = []
-    # pf_estimates = []
+    true_poses = []
+    pf_estimates = []
     # ekf_estimates = []
-    # pf_times = []
+    pf_times = []
     # ekf_times = []
-    # current_wp = len(waypoints) - 1 
+    current_wp = len(waypoints) - 1 
     
     # MAIN LOOP
     print("\nRunning baseline comparison simulation...")
-    print(f"Total steps: {NUM_STEPS}, Progress: ")
-    print("#"*60)
+    print(f"Total steps: {NUM_STEPS}")
     
     for step in range(NUM_STEPS):
-        if (step + 1) % 100 == 0 or step == NUM_STEPS - 1:
-            print(f"#", end="")
+        
+        if ((step + 1) % (NUM_STEPS//10)) == 0 or step == NUM_STEPS - 1:
+            print(f"step: {step + 1}")
+        time.sleep(0.1)
+        x_prev, y_prev, theta_prev = x, y, theta
+        
+        # MOTION CONTROL
+        wp_x, wp_y = waypoints[current_wp]
+        dx_to_wp, dy_to_wp = wp_x - x, wp_y - y
+        target_theta = atan2(dy_to_wp, dx_to_wp)
 
-    #     x_prev, y_prev, theta_prev = x, y, theta
-    #     # ---- MOTION CONTROL ----
-    #     wp_x, wp_y = waypoints[current_wp]
-    #     dx_to_wp, dy_to_wp = wp_x - x, wp_y - y
-    #     target_theta = atan2(dy_to_wp, dx_to_wp)
-    #     dtheta_err = wrap_angle(target_theta - theta)
-    #     if abs(dtheta_err) < 0.3:
-    #         dist = hypot(dx_to_wp, dy_to_wp)
-    #         step_dist = min(dist, linear_speed)
-    #         x += step_dist * cos(theta)
-    #         y += step_dist * sin(theta)
-    #     theta += np.clip(dtheta_err, -angular_speed, angular_speed)
-    #     theta = wrap_angle(theta)
-    #     set_base_link_pose(robot_id, x, y, theta)
-    #     if hypot(dx_to_wp, dy_to_wp) < wp_threshold:
-    #         current_wp = (current_wp + 1) % len(waypoints)
-    #     # ---- ODOMETRY CALCULATION ----
+        dtheta_err = wrap_angle(target_theta - theta)
+        if abs(dtheta_err) < 0.3:
+            dist = hypot(dx_to_wp, dy_to_wp)
+            step_dist = min(dist, linear_speed)
+            x += step_dist * cos(theta)
+            y += step_dist * sin(theta)
+        
+        theta = wrap_angle(theta + np.clip(dtheta_err, -angular_speed, angular_speed))
+        set_base_link_pose(robot_id, x, y, theta + np.pi/2)
+        if hypot(dx_to_wp, dy_to_wp) < wp_threshold:
+            current_wp = (current_wp + 1) % len(waypoints)
+        
+        # ODOMETRY CALCULATION
     #     # Calculate displacement in GLOBAL frame (what actually happened)
     #     dx_global = x - x_prev
     #     dy_global = y - y_prev
@@ -170,35 +173,32 @@ def main():
     #     odom_pf = (dx_local, dy_local, delta_theta)
     #     # For EKF: use global frame directly
     #     odom_ekf = (dx_global, dy_global, delta_theta)
-    #     # ---- MOTION/MEASUREMENT UPDATE ----
+        
+        # MOTION/MEASUREMENT UPDATE
     #     pf.motion_update(odom_pf)
     #     ekf.motion_update(odom_ekf)
-    #     ranges, angles, _ = create_lidar_scan(robot_id, link_name)
-    #     t0 = time.time()
-    #     pf.measurement_update(ranges, angles)
-    #     pf_times.append(time.time() - t0)
+        
+        ranges, angles, _ = create_lidar_scan(robot_id, link_name)
+
+        t0 = time.time()
+        pf.measurement_update(ranges, angles)
+        pf_times.append(time.time() - t0)
     #     t0 = time.time()
     #     ekf.measurement_update(ranges, angles)
     #     ekf_times.append(time.time() - t0)
-    #     if pf.effective_sample_size() < 0.3 * pf.n_particles:
-    #         pf.resample()
-    #     pf_est = pf.estimate()
+        if pf.effective_sample_size() < 0.3 * pf.n_particles:
+            pf.resample()
+        pf_est = pf.estimate()
     #     ekf_est = ekf.estimate()
-
     #     pf_pos_err = hypot(x - pf_est[0], y - pf_est[1])
     #     ekf_pos_err = hypot(x - ekf_est[0], y - ekf_est[1])
-        
-    #     if (step + 1) % 20 == 0:
-    #         print(f"\nStep {step+1}:")
-    #         print(f"  True Pose: ({x:.2f}, {y:.2f}")
-    #         print(f"  PF  Estimate: ({pf_est[0]:.2f}, {pf_est[1]:.2f}) | Error: {pf_pos_err:.3f} m")
-    #         print(f"  EKF Estimate: ({ekf_est[0]:.2f}, {ekf_est[1]:.2f}) | Error: {ekf_pos_err:.3f} m")
 
-    #     # ---- LOG DATA ----
-    #     visualize_lidar(ranges, angles, robot_id, link_name)
-    #     true_poses.append([x, y, theta])
-    #     pf_estimates.append(pf.estimate())
+        # LOG DATA
+        true_poses.append([x, y, theta])
+        pf_estimates.append(pf.estimate())
     #     ekf_estimates.append(ekf.estimate())
+        visualize_lidar(ranges, angles, robot_id, link_name) 
+        p.createMultiBody(basePosition=[x, y, 0], baseCollisionShapeIndex=-1, baseVisualShapeIndex=true_id)
 
     print("\nSimulation complete!")
     
@@ -206,19 +206,19 @@ def main():
     print("="*60)
     print("BASELINE PERFORMANCE COMPARISON RESULTS")
     print("="*60)
-    # pf_pos_rmse, pf_theta_rmse = calculate_rmse(true_poses, pf_estimates)
+    pf_pos_rmse, pf_theta_rmse = calculate_rmse(true_poses, pf_estimates)
     # ekf_pos_rmse, ekf_theta_rmse = calculate_rmse(true_poses, ekf_estimates)
-    # avg_pf_time_ms = np.mean(pf_times) * 1000 if pf_times else 0.0
+    avg_pf_time_ms = np.mean(pf_times) * 1000 if pf_times else 0.0
     # avg_ekf_time_ms = np.mean(ekf_times) * 1000 if ekf_times else 0.0
     
-    # print(f"\nTable 1: Baseline Performance Comparison ({NUM_STEPS} Steps)")
-    # print("{:<25}{:<20}{}".format(
-    #     "Filter", "Position RMSE", "Comp. Time/Step"
-    # ))
-    # print("-" * 75)
-    # print("{:<25}{:<20.3f}{:.2f} ms".format(
-    #     "Particle Filter", pf_pos_rmse, avg_pf_time_ms
-    # ))
+    print(f"\nBaseline Performance Comparison ({NUM_STEPS} Steps)")
+    print("{:<25}{:<20}{:<20}{}".format(
+        "Filter", "Position RMSE", "Rotation RMSE", "Comp. Time/Step"
+    ))
+    print("-" * 75)
+    print("{:<25}{:<20.3f}{:.2f} ms".format(
+        "Particle Filter", pf_pos_rmse, pf_theta_rmse, avg_pf_time_ms
+    ))
     # print("{:<25}{:<20.3f}{:.2f} ms".format(
     #     "Extended Kalman Filter", ekf_pos_rmse, avg_ekf_time_ms
     # ))
