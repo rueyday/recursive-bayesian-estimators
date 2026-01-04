@@ -4,52 +4,6 @@ from pybullet_tools.utils import link_from_name, get_link_pose
 import math
 import time
 
-# ---------- Occupancy grid builder ----------
-def build_occupancy_grid(xmin, xmax, ymin, ymax, resolution,
-                         z_top=3.0, z_bottom=-1.0,
-                         height_threshold=0.1):
-    """
-    Build a 2D occupancy grid by casting vertical rays from z_top to z_bottom
-    at every grid cell center. If a hit exists within the vertical segment,
-    mark cell occupied.
-    Returns:
-        occ: 2D numpy array (ny, nx). 1=occupied, 0=free
-        xs, ys: 1D arrays of cell centers (x, y)
-    Notes:
-        - Uses p.rayTestBatch for speed.
-        - resolution in meters per cell.
-    """
-    xs = np.arange(xmin + resolution/2.0, xmax, resolution)
-    ys = np.arange(ymin + resolution/2.0, ymax, resolution)
-    nx = xs.size
-    ny = ys.size
-
-    origins = []
-    ends = []
-    for y in ys:
-        for x in xs:
-            origins.append((x, y, z_top))
-            ends.append((x, y, z_bottom))
-
-    # batched ray tests
-    results = p.rayTestBatch(origins, ends)
-    occ = np.zeros((ny, nx), dtype=np.uint8)
-    idx = 0
-    for j in range(ny):
-        for i in range(nx):
-            res = results[idx]
-            hit_obj = res[0]
-            if hit_obj != -1:
-                # fraction < 1.0 indicates hit along the ray segment
-                hit_fraction = res[2]
-                # compute z of hit: z_top + fraction*(z_bottom - z_top)
-                z_hit = z_top + hit_fraction * (z_bottom - z_top)
-                # if we care about small obstacles threshold, check difference
-                if (z_hit - z_bottom) > height_threshold or (z_top - z_hit) > height_threshold:
-                    occ[j, i] = 1
-            idx += 1
-    return occ, xs, ys
-
 # ---------- Utility helpers ----------
 def pose_to_index(x, y, xs, ys):
     """Return (i_x, i_y) grid cell indices for pose (x,y)."""
