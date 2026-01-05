@@ -108,7 +108,7 @@ def create_lidar_scan(robot, link_name, num_rays=360, max_range=10.0, min_range=
     
     return np.array(ranges), np.array(angles), hit_positions
 
-def visualize_lidar(ranges, angles, robot, link_name, color=(1, 0, 0), max_point_dist=10.0, life_time=0.5):
+def visualize_lidar(ranges, angles, robot, link_name, color=(1, 0, 0), max_point_dist=10.0, life_time=0.5, step=16):
     link_id = link_from_name(robot, link_name)
     position, orientation = get_link_pose(robot, link_id)
     position = np.asarray(position)
@@ -117,8 +117,9 @@ def visualize_lidar(ranges, angles, robot, link_name, color=(1, 0, 0), max_point
         p.getMatrixFromQuaternion(orientation)
     ).reshape(3, 3)
 
-    ranges = np.asarray(ranges)
-    angles = np.asarray(angles)
+    # Slice the arrays to only process every N-th line
+    ranges = np.asarray(ranges)[::step]
+    angles = np.asarray(angles)[::step]
 
     cos_a = np.cos(angles)
     sin_a = np.sin(angles)
@@ -127,33 +128,5 @@ def visualize_lidar(ranges, angles, robot, link_name, color=(1, 0, 0), max_point
     world_dirs = local_dirs @ rot_matrix.T
     end_points = position + world_dirs * ranges[:, None]
     
-    for dist, end in zip(ranges, end_points):
+    for end in end_points:
         p.addUserDebugLine(position, end, color, lineWidth=0.1, lifeTime=life_time)
-
-# def get_collision_fn_PR2(robot, joints, obstacles):
-#     # check robot collision with environment
-#     disabled_collisions = get_disabled_collisions(robot)
-#     return get_collision_fn(robot, joints, obstacles=obstacles, attachments=[], \
-#         self_collisions=True, disabled_collisions=disabled_collisions)
-
-# def execute_trajectory(robot, joints, path, sleep=None):
-#     # Move the robot according to a given path
-#     if path is None:
-#         print('Path is empty')
-#         return
-#     print('Executing trajectory')
-#     for bq in path:
-#         set_joint_positions(robot, joints, bq)
-#         if sleep is None:
-#             wait_if_gui('Continue?')
-#         else:
-#             wait_for_duration(sleep)
-#     print('Finished')
-
-# def draw_sphere_marker(position, radius, color):
-
-#    return marker_id
-
-# def draw_line(start, end, width, color):
-#     line_id = p.addUserDebugLine(start, end, color, width)
-#     return line_id

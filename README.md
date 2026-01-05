@@ -10,7 +10,13 @@ This demo showcases the advantages of Particle Filters over Extended Kalman Filt
 ./install.sh
 python3 demo.py
 ```
-
+=================================================================
+Filter Type     | RMSE (m)     | Avg Comp Time (ms)
+-----------------------------------------------------------------
+Particle        | 0.6809       | 583.83
+EKF             | 6.2625       | 1.42
+UKF             | 6.0814       | 2.22
+=================================================================
 ### Expected Runtime
 **Total: 5-8 minutes**
 - Demo 1 (EKF Failure Case): 2-3 minutes
