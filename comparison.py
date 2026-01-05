@@ -87,6 +87,7 @@ def main():
     # OCCUPANCY GRID
     occ, xs, ys = build_occupancy_grid(xmin=-8.0, xmax=8.0, ymin=-8.0, ymax=8.0, resolution=0.2)
     true_id = p.createVisualShape(p.GEOM_SPHERE, radius=0.04, rgbaColor=(0, 1, 0, 1))
+    pf_id = p.createVisualShape(p.GEOM_SPHERE, radius=0.04, rgbaColor=(0, 0, 1, 1))
     
     # READ BACK ACTUAL POSE
     link_pose = get_link_pose(robot_id, link_from_name(robot_id, link_name))
@@ -112,7 +113,7 @@ def main():
     pf.particles[:, 2] = theta + np.random.normal(0, 0.5, pf.n_particles)
     pf.weights[:] = 1.0 / pf.n_particles
 
-    # # Initialize EKF with ACTUAL pose
+    # EKF init
     # ekf = ExtendedKalmanFilter(
     #     initial_pose=(x, y, theta),  # Use ACTUAL pose!
     #     motion_noise=(0.1, 0.1, 0.1),
@@ -161,21 +162,21 @@ def main():
             current_wp = (current_wp + 1) % len(waypoints)
         
         # ODOMETRY CALCULATION
-    #     # Calculate displacement in GLOBAL frame (what actually happened)
-    #     dx_global = x - x_prev
-    #     dy_global = y - y_prev
-    #     delta_theta = wrap_angle(theta - theta_prev)
-    #     # For particle filter: convert to local frame using PREVIOUS orientation
-    #     cos_prev = cos(theta_prev)
-    #     sin_prev = sin(theta_prev)
-    #     dx_local = cos_prev * dx_global + sin_prev * dy_global
-    #     dy_local = -sin_prev * dx_global + cos_prev * dy_global
-    #     odom_pf = (dx_local, dy_local, delta_theta)
+        # Calculate displacement in GLOBAL frame
+        dx_global = x - x_prev
+        dy_global = y - y_prev
+        delta_theta = wrap_angle(theta - theta_prev)
+        # For particle filter: convert to local frame using PREVIOUS orientation
+        cos_prev = cos(theta_prev)
+        sin_prev = sin(theta_prev)
+        dx_local = cos_prev * dx_global + sin_prev * dy_global
+        dy_local = -sin_prev * dx_global + cos_prev * dy_global
+        odom_pf = (dx_local, dy_local, delta_theta)
     #     # For EKF: use global frame directly
     #     odom_ekf = (dx_global, dy_global, delta_theta)
         
         # MOTION/MEASUREMENT UPDATE
-    #     pf.motion_update(odom_pf)
+        pf.motion_update(odom_pf)
     #     ekf.motion_update(odom_ekf)
         
         ranges, angles, _ = create_lidar_scan(robot_id, link_name)
@@ -190,14 +191,15 @@ def main():
             pf.resample()
         pf_est = pf.estimate()
     #     ekf_est = ekf.estimate()
-    #     pf_pos_err = hypot(x - pf_est[0], y - pf_est[1])
     #     ekf_pos_err = hypot(x - ekf_est[0], y - ekf_est[1])
 
         # LOG DATA
         true_poses.append([x, y, theta])
         pf_estimates.append(pf.estimate())
     #     ekf_estimates.append(ekf.estimate())
+        
         visualize_lidar(ranges, angles, robot_id, link_name) 
+        p.createMultiBody(basePosition=[pf_est[0], pf_est[1], 0], baseCollisionShapeIndex=-1, baseVisualShapeIndex=pf_id)
         p.createMultiBody(basePosition=[x, y, 0], baseCollisionShapeIndex=-1, baseVisualShapeIndex=true_id)
 
     print("\nSimulation complete!")
